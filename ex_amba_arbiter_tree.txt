@@ -1,0 +1,201 @@
+##The following tree represents the LTL formula:
+(_hburstsingle_ & !_hbusreq0_ & !_hbusreq1_ & !_hlock0_ & !_hlock1_ & !_hready_ & _htransidle_ & G(!_hready_ -> ((_htransnonseq_ <-> X_htransnonseq_) & (_htransseq_ <-> X_htransseq_) & (_htransidle_ <-> X_htransidle_) & (_hburstsingle_ <-> X_hburstsingle_) & (_hburstincr4_ <-> X_hburstincr4_) & (_hburstincr_ <-> X_hburstincr_))) & G((_hburstincr_ & _hmastlock_) -> XF!_busreq_) & GF_hready_ & G(((!_hbusreq0_ & !_hlock0_ & X_hlock0_) -> X_hbusreq0_) & ((!_hbusreq1_ & !_hlock1_ & X_hlock1_) -> X_hbusreq1_)) & G(_htransidle_ -> X!_htransseq_) & G((_hburstincr4_ & _hready_) -> (_htransnonseq_ -> X_htransseq_)) & G((_granted_ & _hready_) -> X_htransnonseq_) & G(!(_hbusreq0_ | _hbusreq1_) -> _htransidle_)) -> (_decide_ & !_granted_ & _hgrant0_ & !_hgrant1_ & _hmaster0_ & !_hmastlock_ & G((_hmaster0_ -> (_busreq_ <-> _hbusreq0_)) & (_hmaster1_ -> (_busreq_ <-> _hbusreq1_))) & G((_hburstincr_ & _hmastlock_ & _hready_) -> (_htransnonseq_ -> X(_htransseq_ U !_busreq_))) & G((_hburstincr4_ & _hmastlock_ & _hready_) -> ((_hready_ & _htransnonseq_) -> X(_htransseq_ U (_hready_ & _htransseq_ & X(_htransseq_ U (_hready_ & _htransseq_ & X(_htransseq_ U _hready_))))))) & G((_decide_ & (_hbusreq0_ | _hbusreq1_)) -> X_granted_) & G(((_granted_ & _hready_) -> X!_granted_) & ((_granted_ & !_hready_) -> X_granted_)) & G(_hready_ -> ((_hgrant0_ <-> X_hmaster0_) & (_hgrant1_ <-> X_hmaster1_))) & G(((_hgrant0_ & _hlock0_ & _hready_) | (_hgrant1_ & _hlock1_ & _hready_)) -> X_hmastlock_) & G((!_granted_ | !_hready_) -> ((_hmaster0_ <-> X_hmaster0_) & (_hmaster1_ <-> X_hmaster1_) & (_hmastlock_ <-> X_hmastlock_))) & G(!_decide_ -> ((_hgrant0_ <-> X_hgrant0_) & (_hgrant1_ <-> X_hgrant1_))) & G(!_hgrant1_ -> (!_hgrant1_ U (_hbusreq1_ & F_hgrant1_))) & G((_decide_ & !_hbusreq0_ & !_hbusreq1_) -> X_hgrant0_) & G((_hbusreq0_ -> F(!_hbusreq0_ | _hmaster0_)) & (_hbusreq1_ -> F(!_hbusreq1_ | _hmaster1_))))
+
+
+
+Text: Assumptions. We present the assumptions below, and with each assumption we mention how the assumption is obtained directly from the AMBA AHB standard.
+A1 SYMBOL0 (The assumption A1 is a formal specification obtained from [2]). (G1 is used to convert HBUSREQi to BUSREQ in Table 7).
+A2 SYMBOL1 (The assumption A2 is the formal specification obtained from the property described in page 59 of [4]).
+A3 SYMBOL2 (The assumption A3 is the formal specification that is obtained from the property described in page 62 of [4]).
+A4 SYMBOL3 (The assumption A4 is the formal specification obtained from page 42 of [4]).
+A5 SYMBOL4 (The assumption A5 is the formal specification obtained from page 43 of [4]).
+A6 SYMBOL5 (The assumption A6 is obtained from page 42 of [4]).
+A7 SYMBOL6 (The assumption A7 is obtained from page 42 of [4]).
+A8 SYMBOL7 (The assumption A8 is obtained from [3]).
+A9 SYMBOL8 This assumption is valid because at power up, all hardware signals are at reset values.
+
+Guarantees. The guarantees are as follows.
+G1 SYMBOL9
+G2 SYMBOL10 (This guarantee is obtained from page 62 of [4]).
+G3 SYMBOL11 (This guarantee is obtained from page 62 of [4]).
+G4 SYMBOL12 (This guarantee is based on information from page 63 of [4]).
+G5 SYMBOL13 (This guarantee is obtained from page 64 of [4]).
+G6 SYMBOL14 (This guarantee is obtained from page 64 of [4]).
+G7 SYMBOL15 (This guarantee is obtained from page 62 of [4]).
+G8 SYMBOL16
+G9 SYMBOL17
+G10 SYMBOL18 (This guarantee is obtained from page 63 of [4]).
+G11 SYMBOL19
+G12 SYMBOL20
+Translation: ((_SYMBOL0_) && (_SYMBOL1_) && (_SYMBOL2_) && (_SYMBOL3_) && (_SYMBOL4_) && (_SYMBOL5_) && (_SYMBOL6_) && (_SYMBOL7_) && (_SYMBOL8_) -> ((_SYMBOL9_) && (_SYMBOL10_) && (_SYMBOL11_) && (_SYMBOL12_) && (_SYMBOL13_) && (_SYMBOL14_) && (_SYMBOL15_) && (_SYMBOL16_) && (_SYMBOL17_) && (_SYMBOL18_) && (_SYMBOL19_) && (_SYMBOL20_)))
+	 Text: During SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL0
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: a locked burst transfer of unspecified length
+		 Symbol: SYMBOL0
+		 Translation: (_hmastlock_ && _hburstincr_)
+		 Text: leaving HBUSREQi high locks the bus
+		 Symbol: SYMBOL1
+		 Translation: (X F !_busreq_)
+	 Text: Leaving HREADY low locks the bus, the standard forbids it.
+	 Symbol: SYMBOL1
+	 Translation: G (F (_hready_))
+	 Text: Signals HLOCKi and HBUSREQi are asserted by AHB Master at the same time (i.e., these signals go from low to high at the same time).
+	 Symbol: SYMBOL2
+	 Translation: G ( ((!_hlock0_ && !_hbusreq0_ && X _hlock0_) ->  X_hbusreq0_) && ((!_hlock1_ && !_hbusreq1_ && X _hlock1_) ->  X_hbusreq1_))
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL3
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: HREADY signal is low
+		 Symbol: SYMBOL0
+		 Translation: !(_hready_)
+		 Text: control signals i.e., HBURST and HTRANS should hold their values
+		 Symbol: SYMBOL1
+		 Translation: ((_htransnonseq_ <-> X_htransnonseq_) && (_htransseq_ <-> X_htransseq_) && (_htransidle_ <-> X_htransidle_) && (_hburstsingle_ <-> X_hburstsingle_) && (_hburstincr4_ <-> X_hburstincr4_) && (_hburstincr_ <-> X_hburstincr_))
+	 Text: If SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL4
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: no transfer is taking place
+		 Symbol: SYMBOL0
+		 Translation: _htransidle_
+		 Text: the HTRANS signal cannot become SEQ in the next cycle
+		 Symbol: SYMBOL1
+		 Translation: X!_htransseq_
+	 Text: In SYMBOL0, if SYMBOL1, SYMBOL2.
+	 Symbol: SYMBOL5
+	 Translation: G((_SYMBOL0_ && _SYMBOL1_) -> _SYMBOL2_)
+		 Text: burst sequence (i.e., HBURST = INCR4)
+		 Symbol: SYMBOL0
+		 Translation: _hburstincr4_
+		 Text: HREADY is high
+		 Symbol: SYMBOL1
+		 Translation: (_hready_)
+		 Text: the NONSEQ transfer shall always be followed by SEQ transfer
+		 Symbol: SYMBOL2
+		 Translation: (_htransnonseq_) -> (X (_htransseq_))
+	 Text: The first transfer of any AHB sequence is NONSEQ in nature.
+	 Symbol: SYMBOL6
+	 Translation: G ((_granted_ && _hready_) -> (X (_htransnonseq_)))
+	 Text: When SYMBOL0, SYMBOL1
+	 Symbol: SYMBOL7
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: no AHB Masters is making a request for bus
+		 Symbol: SYMBOL0
+		 Translation: !((_hbusreq0_) || (_hbusreq1_))
+		 Text: no transfer will take place.
+		 Symbol: SYMBOL1
+		 Translation: _htransidle_
+	 Text: All input signals are low initially.
+	 Symbol: SYMBOL8
+	 Translation: (!_hbusreq0_ && !_hbusreq1_ && !_hlock0_ && !_hlock1_ && !_hready_ && (_htransidle_) && (_hburstsingle_))
+	 Text: Variable BUSREQ points to HBUSREQi of the master that is currently granted access to the bus.
+	 Symbol: SYMBOL9
+	 Translation: G (((_hmaster0_ ) -> (_busreq_ <-> _hbusreq0_)) && ((_hmaster1_ ) -> (_busreq_ <-> _hbusreq1_)))
+	 Text: When SYMBOL0, SYMBOL1
+	 Symbol: SYMBOL10
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: a locked unspecified length burst starts
+		 Symbol: SYMBOL0
+		 Translation: _hmastlock_ && (_hburstincr_) && _hready_
+		 Text: a new access does not start until the current master (i) releases the bus by lowering HBUSREQi.
+		 Symbol: SYMBOL1
+		 Translation: (_htransnonseq_) -> X ((_htransseq_) U !_busreq_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL11
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: a length-four locked burst starts
+		 Symbol: SYMBOL0
+		 Translation: _hmastlock_ && (_hburstincr4_) && _hready_
+		 Text: no other accesses start until the end of the burst. We can transfer data only when HREADY is high, so the current burst ends at the fourth occurrence of HREADY
+		 Symbol: SYMBOL1
+		 Translation: ((_hready_ && (_htransnonseq_)) -> X (_htransseq_ U (_htransseq_ && _hready_ && X(_htransseq_ U (_htransseq_ && _hready_ && X(_htransseq_ U _hready_))))))
+	 Text: If SYMBOL0 and SYMBOL1, then SYMBOL2.
+	 Symbol: SYMBOL12
+	 Translation: G (((_SYMBOL0_) && (_SYMBOL1_)) -> (_SYMBOL2_))
+		 Text: there is at least one bus request present
+		 Symbol: SYMBOL0
+		 Translation: _hbusreq0_ || _hbusreq1_
+		 Text: signal DECIDE is high
+		 Symbol: SYMBOL1
+		 Translation: (_decide_)
+		 Text: GRANTED gets asserted in next cycle
+		 Symbol: SYMBOL2
+		 Translation: X (_granted_)
+	 Text: If SYMBOL0, then SYMBOL1. If SYMBOL2, then SYMBOL3.
+	 Symbol: SYMBOL13
+	 Translation: G (((_SYMBOL0_) -> (_SYMBOL1_)) && ((_SYMBOL2_) -> (_SYMBOL3_)) )
+		 Text: HREADY and GRANTED signals are simultaneously high
+		 Symbol: SYMBOL0
+		 Translation: ((_hready_) && (_granted_))
+		 Text: GRANTED gets deasserted in next cycle
+		 Symbol: SYMBOL1
+		 Translation: X (!(_granted_))
+		 Text: SYMBOL0 and SYMBOL1
+		 Symbol: SYMBOL2
+		 Translation: ((_SYMBOL0_) && (_SYMBOL1_))
+			 Text: GRANTED signal is high
+			 Symbol: SYMBOL0
+			 Translation: (_granted_)
+			 Text: HREADY is low
+			 Symbol: SYMBOL1
+			 Translation: !(_hready_)
+		 Text: GRANTED signal holds its value in next cycle
+		 Symbol: SYMBOL3
+		 Translation: X (_granted_)
+	 Text: The HMASTER signal follows the grants: When SYMBOL0, SYMBOL1. It implies that no two grants may be high simultaneously and the arbiter cannot change HMASTER without giving a grant.
+	 Symbol: SYMBOL14
+	 Translation: G(_SYMBOL0_ -> _SYMBOL1_)
+		 Text: HREADY is high
+		 Symbol: SYMBOL0
+		 Translation: (_hready_)
+		 Text: HMASTER is set to the master that is currently granted
+		 Symbol: SYMBOL1
+		 Translation: (_hgrant0_ <-> X (_hmaster0_)) && (_hgrant1_ <-> X (_hmaster1_))
+	 Text: Whenever SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL15
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: signal HREADY, HLOCKi and HGRANTi are simultaneously high
+		 Symbol: SYMBOL0
+		 Translation: ((_hready_) && (_hlock0_) && (_hgrant0_)) || ((_hready_) && (_hlock1_) && (_hgrant1_))
+		 Text: HMASTLOCK gets asserted in the following cycle
+		 Symbol: SYMBOL1
+		 Translation: X (_hmastlock_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL16
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: any of GRANTED or HREADY signals is low
+		 Symbol: SYMBOL0
+		 Translation: (!(_granted_) || !(_hready_))
+		 Text: the HMASTER and HMASTLOCK signals do not change
+		 Symbol: SYMBOL1
+		 Translation: (((_hmaster0_) <-> X (_hmaster0_)) && ((_hmaster1_) <-> X (_hmaster1_)) && ((_hmastlock_) <-> X (_hmastlock_)))
+	 Text: Whenever SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL17
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: DECIDE is low
+		 Symbol: SYMBOL0
+		 Translation: !(_decide_)
+		 Text: HGRANTi signal do not change
+		 Symbol: SYMBOL1
+		 Translation: ((_hgrant0_) <-> X (_hgrant0_)) && ((_hgrant1_) <-> X (_hgrant1_))
+	 Text: SYMBOL0 SYMBOL1
+	 Symbol: SYMBOL18
+	 Translation: (_SYMBOL0_ && _SYMBOL1_)
+		 Text: We do not grant the bus without a request, except to Master 0.
+		 Symbol: SYMBOL0
+		 Translation: G ( (!_hgrant1_ -> (!_hgrant1_ U (_hbusreq1_ && F _hgrant1_))) )
+		 Text: If SYMBOL0, SYMBOL1.
+		 Symbol: SYMBOL1
+		 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+			 Text: there are no requests
+			 Symbol: SYMBOL0
+			 Translation: _decide_ && !_hbusreq0_ && !_hbusreq1_
+			 Text: the bus is granted to Master 0
+			 Symbol: SYMBOL1
+			 Translation: X _hgrant0_
+	 Text: We have a fair bus i.e., every master that has made a request shall be serviced eventually.
+	 Symbol: SYMBOL19
+	 Translation: G ( (_hbusreq0_ -> F (!_hbusreq0_ || (_hmaster0_))) && (_hbusreq1_ -> F (!_hbusreq1_ || (_hmaster1_))) )
+	 Text: The signals DECIDE and HGRANT0 are high at first clock tick and all others are low.
+	 Symbol: SYMBOL20
+	 Translation: _decide_ && _hgrant0_ && (_hmaster0_) && !_granted_ && !_hmastlock_ && !_hgrant1_

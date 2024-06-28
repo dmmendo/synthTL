@@ -1,0 +1,48 @@
+You are a Linear Temporal Logic (LTL) expert. Your answers always need to follow the following output format. 
+Remember that X means "next", U means "until", G means "globally", F means "eventually", && means "and", || means "or", ! means "not", -> means "implies", and <-> means "if and only if".
+The formula should only contain atomic propositions or operators ||, &&, !, ->, <->, X, U, G, F.
+
+The following explain each field of the translations:
+Natural language - the natural language phrase to be translated to LTL.
+LTL - an LTL formula which is the translation of the natural language to LTL. It must only contain variables in the natural language phrase, which are denoted by underscores. A natural language phrase which does not contain any variables is trivially true and translated as "1". LTL formulas must be well-formed with proper parantheses.
+
+Account for the following example translations:
+
+{"Natural language": "_a_ signal is high", "LTL": "(_a_)"}
+
+{"Natural language": "_a_ is low", "LTL": "!(_a_)"}
+
+{"Natural language": "There cannot be an assertion failure thus _a_", "LTL": "(_a_)"}
+
+{"Natural language": "_a_ gets deasserted in next cycle", "LTL": "X (!(_a_))"}
+
+{"Natural language": "_a_ signal holds its value in next cycle", "LTL": "X (_a_)"}
+
+{"Natural language": "one of _a_, _b_ and _c_ signal shall be high", "LTL": "((_a_) || (_b_) || (_c_))"}
+
+{"Natural language": "signal _a_, _b_ and _c_ are simultaneously high", "LTL": "((_a_) && (_b_) && (_c_))"}
+
+{"Natural language": "G5 _a_ G7 _b_ G8-mod _c_ G9 _d_", "LTL": "((_a_) && (_b_) && (_c_) && (_d_))"}
+
+{"Natural language": "_a_ and _b_ cannot be simultaneously high", "LTL": "G (!((_a_) && (_b_)))"}
+
+{"Natural language": "_a_ signal gets asserted and de-asserted with _b_.", "LTL": "G ((_a_) <-> (_b_))"}
+
+{"Natural language": "_a_ signal does not change", "LTL": "((_a_) <-> X (_a_))"}
+
+{"Natural language": "_a_, and _b_ shall hold their values", "LTL": "(((_a_) <-> X (_a_)) && ((_b_) <-> X (_b_)))"}
+
+{"Natural language": "Eventually, _a_ will be high.", "LTL": "G (F (_a_))"}
+
+{"Natural language": "specific behavior is specified by _c_, i.e., when _a_, _b_. Since there cannot be assertion failures.", "LTL": "G ((_a_) -> (_b_))"}
+
+{"Natural language": "the following are assumptions _a_ and the following are gaurantees _b_", "LTL": "((_a_) -> (_b_))"}
+
+{"Natural language": "_a_ implies _b_", "LTL": "G ((_a_) -> (_b_))"}
+
+Account for the following context if needed:  EMPTY This signal is input to the bus slave indicating memory is empty
+ We are considering memory with two status signals EMPTY and FULL
+When memory is empty, i
+ FULL This signal is input to the bus slave indicating memory is full
+The LTL translation may only contain a subset of the following variables: ['_htransidle_', '_hburstsingle_', '_hwrite_', '_start_', '_last_', '_hsel_', '_htransnonseq_', '_hready_', '_htransseq_', '_hlock_', '_hburstincr4_', '_hburstincr_', '_haddri_', '_hwdatai_', '_doi_', '_hrespokay_', '_wr_', '_rd_', '_full_', '_hresperror_', '_empty_', '_addri_', '_dii_', '_hrdatai_']
+Provide the LTL formula for the following natural language phrase (the translation must only use LTL operators and the format must be in JSON as shown in previous examples): 'the memory is empty'

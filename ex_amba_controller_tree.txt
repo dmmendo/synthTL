@@ -1,0 +1,198 @@
+##The following tree represents the LTL formula:
+(G(_reqvld_ -> (_len1_ | _len4_ | _lenx_)) & G(_reqvld_ -> (_rd_ | _wr_)) & G(X!_reqvld_ -> ((_rd_ <-> X_rd_) & (_wr_ <-> X_wr_) & (_len1_ <-> X_len1_) & (_len4_ <-> X_len4_) & (_lenx_ <-> X_lenx_))) & G!(_rd_ & _wr_) & G!(_len1_ & _len4_ & _lenx_) & G_hrespokay_ & G(_reqvld_ -> F_hgrant_) & G((_hburstincr_ & _hlock_) -> XF!_reqvld_) & GF_hready_ & GF(!_hgrant_ & !_reqvld_)) -> (G(!_hready_ -> ((_htransnonseq_ <-> X_htransnonseq_) & (_htransseq_ <-> X_htransseq_) & (_htransidle_ <-> X_htransidle_) & (_hburstsingle_ <-> X_hburstsingle_) & (_hburstincr4_ <-> X_hburstincr4_) & (_hburstincr_ <-> X_hburstincr_))) & G_hsizeword_ & G(_hbusreq_ <-> _reqvld_) & G((!_hbusreq_ & !_hlock_ & X_hbusreq_) -> X_hlock_) & G(_last_ -> !_hlock_) & G((_hburstincr4_ & _hlock_ & _hready_ & _htransnonseq_) -> X(_htransseq_ U (_hready_ & _htransseq_ & X(_htransseq_ U (_hready_ & _htransseq_ & X(_htransseq_ U _hready_)))))) & G((_hbusreq_ & _hgrant_ & _hready_ & _htransidle_) -> ((_len1_ -> X_hburstsingle_) & (_lenx_ -> X_hburstincr_) & (_len4_ -> X_hburstincr4_))) & G((_hbusreq_ & _hgrant_ & _hready_ & _htransidle_) -> X_htransnonseq_) & G((_hready_ & _htransnonseq_ & !_last_) -> X_htransseq_) & G(_htransidle_ -> _hburstsingle_) & G((_hgrant_ & _hready_ & _htransnonseq_) -> ((_wr_ -> _hwrite_) & (_rd_ -> !_hwrite_))) & G((_hgrant_ & _hready_) -> _reqaddr_) & G((_reqaddr_ & _wr_) -> _reqwrdata_) & G((_hready_ & !_hwrite_ & (_htransnonseq_ | _htransseq_)) -> _recrddata_) & G(_reqaddr_ -> X(_haddri_ <-> _inaddri_)) & G(_reqwrdata_ -> X(_hwdatai_ <-> _indatai_)) & G((_hready_ & !_hwrite_ & (_htransnonseq_ | _htransseq_)) -> X(_hrdatai_ <-> _outdatai_)))
+
+
+Text: Assumptions. The assumptions are as follows.
+A1 SYMBOL0
+A2 SYMBOL1
+A3 SYMBOL2
+A4 SYMBOL3
+A5 SYMBOL4
+A6 SYMBOL5
+A7 SYMBOL6
+A8 SYMBOL7
+A9 SYMBOL8
+A10 SYMBOL9
+
+Guarantees. The guarantees are as follows.
+G1 SYMBOL10
+G2 SYMBOL11
+G3 SYMBOL12
+G4 SYMBOL13
+G5 SYMBOL14
+G6 SYMBOL15
+G7 SYMBOL16
+G8 SYMBOL17
+G9 SYMBOL18
+G10 SYMBOL19
+G11 SYMBOL20
+G12 SYMBOL21
+G13 SYMBOL22
+G14 SYMBOL23
+G15 SYMBOL24
+Translation: ((_SYMBOL0_) && (_SYMBOL1_) && (_SYMBOL2_) && (_SYMBOL3_) && (_SYMBOL4_) && (_SYMBOL5_) && (_SYMBOL6_) && (_SYMBOL7_) && (_SYMBOL8_) && (_SYMBOL9_)) -> ((_SYMBOL10_) && (_SYMBOL11_) && (_SYMBOL12_) && (_SYMBOL13_) && (_SYMBOL14_) && (_SYMBOL15_) && (_SYMBOL16_) && (_SYMBOL17_) && (_SYMBOL18_) && (_SYMBOL19_) && (_SYMBOL20_) && (_SYMBOL21_) && (_SYMBOL22_) && (_SYMBOL23_) && (_SYMBOL24_))
+	 Text: Length of transfer will be specified with REQ_VLD signal i.e., whenever SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL0
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: REQ_VLD is high
+		 Symbol: SYMBOL0
+		 Translation: (_reqvld_)
+		 Text: one of LEN1, LEN4 and LENX signal shall be high
+		 Symbol: SYMBOL1
+		 Translation: ((_len1_) || (_len4_) || (_lenx_))
+	 Text: Nature of transfer will be specified with REQ_VLD signal i.e., whenever SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL1
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: REQ_VLD signal is high
+		 Symbol: SYMBOL0
+		 Translation: (_reqvld_)
+		 Text: at least one of RD or WR signal shall be high
+		 Symbol: SYMBOL1
+		 Translation: ((_rd_) || (_wr_))
+	 Text: If SYMBOL0, then SYMBOL1.
+	 Symbol: SYMBOL2
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: REQ_VLD signal is low
+		 Symbol: SYMBOL0
+		 Translation: X (!(_reqvld_))
+		 Text: RD, WR, LEN1, LEN4 and LENX shall hold their values
+		 Symbol: SYMBOL1
+		 Translation: (((_rd_) <-> X (_rd_)) && ((_wr_) <-> X (_wr_)) && ((_len1_) <-> X (_len1_)) && ((_len4_) <-> X (_len4_)) && ((_lenx_) <-> X (_lenx_)) )
+	 Text: There cannot be conflict between signals indicating nature of transfer, thus RD and WR signal cannot be high simultaneously.
+	 Symbol: SYMBOL3
+	 Translation: G (!((_rd_) && (_wr_)))
+	 Text: There cannot be conflict between signals indicating length of transfer thus LEN1, LEN4 and LENX signals cannot be high simultaneously.
+	 Symbol: SYMBOL4
+	 Translation: G (!((_len1_) && (_len4_) && (_lenx_)) )
+	 Text: Input HRESP signal shall be OKAY throughout.
+	 Symbol: SYMBOL5
+	 Translation: G (_hrespokay_)
+	 Text: The bus is a fair one, hence every HBUSREQ shall eventually be answered.
+	 Symbol: SYMBOL6
+	 Translation: G (_reqvld_ -> F _hgrant_)
+	 Text: During SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL7
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: a locked unspecified length burst
+		 Symbol: SYMBOL0
+		 Translation: (_hlock_ && (_hburstincr_))
+		 Text: leaving HBUSREQ high locks the bus
+		 Symbol: SYMBOL1
+		 Translation: X F !_reqvld_
+	 Text: Eventually, HREADY will be high.
+	 Symbol: SYMBOL8
+	 Translation: G (F (_hready_))
+	 Text: Eventually, REQ_VLD and HGRANT signals will be low.
+	 Symbol: SYMBOL9
+	 Translation: G (F ((!(_reqvld_)) && (!(_hgrant_))))
+	 Text: Data bus is 32-bit wide. Thus HSIZE shall be fixed to WORD throughout.
+	 Symbol: SYMBOL10
+	 Translation: G (_hsizeword_)
+	 Text: HBUSREQ signal gets asserted and de-asserted with REQ_VLD.
+	 Symbol: SYMBOL11
+	 Translation: G ((_hbusreq_) <-> (_reqvld_))
+	 Text: Bus master requests only for locked transfer.
+	 Symbol: SYMBOL12
+	 Translation: G ((!_hbusreq_ && X _hbusreq_ && !_hlock_) -> X _hlock_)
+	 Text: If SYMBOL0, then SYMBOL1.
+	 Symbol: SYMBOL13
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: the ongoing transfer is last transfer of an AHB sequence
+		 Symbol: SYMBOL0
+		 Translation: (_last_)
+		 Text: HLOCK shall be lowered
+		 Symbol: SYMBOL1
+		 Translation: !_hlock_
+	 Text: Length four burst (HBURST = INCR4) shall end at fourth occurrence of HREADY.
+	 Symbol: SYMBOL14
+	 Translation: G ((_hlock_ && (_hburstincr4_) && _hready_ && (_htransnonseq_)) -> X (_htransseq_ U (_htransseq_ && _hready_ && X(_htransseq_ U (_htransseq_ && _hready_ && X(_htransseq_ U _hready_))))))
+	 Text: HBURST shall be set according to length of the transfer indicated by LEN1, LEN4 and LENX.
+	 Symbol: SYMBOL15
+	 Translation: G (_hbusreq_ && _hgrant_ && (_htransidle_) && _hready_ -> ((_len1_ -> X (_hburstsingle_)) && (_lenx_ -> X (_hburstincr_)) && (_len4_ -> X (_hburstincr4_))))
+	 Text: SYMBOL0. SYMBOL1.
+	 Symbol: SYMBOL16
+	 Translation: ((_SYMBOL0_) && (_SYMBOL1_))
+		 Text: First transfer of an AHB sequence is always NONSEQ in nature
+		 Symbol: SYMBOL0
+		 Translation: G (_hbusreq_ && _hgrant_ && (_htransidle_) && _hready_ -> X (_htransnonseq_))
+		 Text: All following transfers in sequence shall be SEQ in nature
+		 Symbol: SYMBOL1
+		 Translation: G (!_last_ && (_htransnonseq_) && _hready_ -> X (_htransseq_)) && G ((_htransidle_) -> (_hburstsingle_))
+	 Text: Nature of transfer shall be set according to WR and RD signals.
+	 Symbol: SYMBOL17
+	 Translation: G (_hgrant_ && (_htransnonseq_) && _hready_ -> ((_wr_ -> _hwrite_) && (_rd_ -> !_hwrite_)))
+	 Text: If SYMBOL0, then SYMBOL1.
+	 Symbol: SYMBOL18
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: HREADY is low
+		 Symbol: SYMBOL0
+		 Translation: !(_hready_)
+		 Text: all control signals shall hold their values
+		 Symbol: SYMBOL1
+		 Translation: ((_htransnonseq_ <-> X_htransnonseq_) && (_htransseq_ <-> X_htransseq_) && (_htransidle_ <-> X_htransidle_) && (_hburstsingle_ <-> X_hburstsingle_) && (_hburstincr4_ <-> X_hburstincr4_) && (_hburstincr_ <-> X_hburstincr_))
+	 Text: When SYMBOL0, SYMBOL1. It ensures that in next cycle, master can put address on address bus.
+	 Symbol: SYMBOL19
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: HREADY and HGRANT are simultaneously high
+		 Symbol: SYMBOL0
+		 Translation: ((_hready_) && (_hgrant_))
+		 Text: REQ_ADDR signal shall be high
+		 Symbol: SYMBOL1
+		 Translation: (_reqaddr_)
+	 Text: When SYMBOL0, SYMBOL1. It ensures that data shall be put on data bus one cycle after address is put on address bus.
+	 Symbol: SYMBOL20
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: both REQ_ADDR and WR signals are high
+		 Symbol: SYMBOL0
+		 Translation: ((_reqaddr_) && (_wr_))
+		 Text: REQ_WR_DATA signal shall also be high
+		 Symbol: SYMBOL1
+		 Translation: (_reqwrdata_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL21
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: SYMBOL0 and SYMBOL1
+		 Symbol: SYMBOL0
+		 Translation: ((_SYMBOL0_) && (_SYMBOL1_))
+			 Text: a read transfer is taking place
+			 Symbol: SYMBOL0
+			 Translation: ((_htransnonseq_) || (_htransseq_)) && !_hwrite_
+			 Text: HREADY is high
+			 Symbol: SYMBOL1
+			 Translation: (_hready_)
+		 Text: REC_RD_DATA signal shall also be high
+		 Symbol: SYMBOL1
+		 Translation: (_recrddata_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL22
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: REQ_ADDR is high
+		 Symbol: SYMBOL0
+		 Translation: (_reqaddr_)
+		 Text: the input signals IN_ADDR will be copied to address bus in the next cycle
+		 Symbol: SYMBOL1
+		 Translation: X (_inaddri_ <-> _haddri_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL23
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: REQ_WR_DATA is high
+		 Symbol: SYMBOL0
+		 Translation: (_reqwrdata_)
+		 Text: the input signals IN_DATA will be copied to data bus in the next cycle
+		 Symbol: SYMBOL1
+		 Translation: X (_indatai_ <-> _hwdatai_)
+	 Text: When SYMBOL0, SYMBOL1.
+	 Symbol: SYMBOL24
+	 Translation: G ((_SYMBOL0_) -> (_SYMBOL1_))
+		 Text: SYMBOL0 and SYMBOL1
+		 Symbol: SYMBOL0
+		 Translation: ((_SYMBOL0_) && (_SYMBOL1_))
+			 Text: read transaction is in progress
+			 Symbol: SYMBOL0
+			 Translation: !_hwrite_ && ((_htransseq_) || (_htransnonseq_))
+			 Text: HREADY is high
+			 Symbol: SYMBOL1
+			 Translation: (_hready_)
+		 Text: OUT_DATA will copy the value of HRDATAin the next cycle
+		 Symbol: SYMBOL1
+		 Translation: X (_outdatai_ <-> _hrdatai_)

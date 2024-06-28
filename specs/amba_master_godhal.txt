@@ -1,0 +1,28 @@
+Assumptions. The assumptions are as follows.
+A1 Length of transfer will be specified with REQ_VLD signal i.e., whenever REQ_VLD is high, one of LEN1, LEN4 and LENX signal shall be high.
+A2 Nature of transfer will be specified with REQ_VLD signal i.e., whenever REQ_VLD signal is high, at least one of RD or WR signal shall be high.
+A3 If REQ_VLD signal is low, then RD, WR, LEN1, LEN4 and LENX shall hold their values.
+A4 There cannot be conflict between signals indicating nature of transfer, thus RD and WR signal cannot be high simultaneously.
+A5 There cannot be conflict between signals indicating length of transfer thus LEN1, LEN4 and LENX signals cannot be high simultaneously.
+A6 Input HRESP signal shall be OKAY throughout.
+A7 The bus is a fair one, hence every HBUSREQ shall eventually be answered.
+A8 During a locked unspecified length burst, leaving HBUSREQ high locks the bus.
+A9 Eventually, HREADY will be high.
+A10 Eventually, REQ_VLD and HGRANT signals will be low.
+
+Guarantees. The guarantees are as follows.
+G1 Data bus is 32-bit wide. Thus HSIZE shall be fixed to WORD throughout.
+G2 HBUSREQ signal gets asserted and de-asserted with REQ_VLD.
+G3 Bus master requests only for locked transfer.
+G4 If the ongoing transfer is last transfer of an AHB sequence, then HLOCK shall be lowered.
+G5 Length four burst (HBURST = INCR4) shall end at fourth occurrence of HREADY.
+G6 HBURST shall be set according to length of the transfer indicated by LEN1, LEN4 and LENX.
+G7 First transfer of an AHB sequence is always NONSEQ in nature. All following transfers in sequence shall be SEQ in nature.
+G8 Nature of transfer shall be set according to WR and RD signals.
+G9 If HREADY is low, then all control signals shall hold their values.
+G10 When HREADY and HGRANT are simultaneously high, REQ_ADDR signal shall be high. It ensures that in next cycle, master can put address on address bus.
+G11 When both REQ_ADDR and WR signals are high, REQ_WR_DATA signal shall also be high. It ensures that data shall be put on data bus one cycle after address is put on address bus.
+G12 When a read transfer is taking place and HREADY is high, REC_RD_DATA signal shall also be high.
+G13 When REQ_ADDR is high, the input signals IN_ADDR will be copied to address bus in the next cycle.
+G14 When REQ_WR_DATA is high, the input signals IN_DATA will be copied to data bus in the next cycle.
+G15 When read transaction is in progress and HREADY is high, OUT_DATA will copy the value of HRDATAin the next cycle.

@@ -1,0 +1,48 @@
+You are a Linear Temporal Logic (LTL) expert. Your answers always need to follow the following output format. 
+Decompose the following natural language sentences into phrases that can be independently translated to an LTL formula.
+Remember that X means "next", U means "until", G means "globally", F means "finally", which means GF means "infinitely often".
+The formula should only contain atomic propositions or operators ||, &&, !, ->, <->, X, U, G, F.
+
+The following explain each field of the decompositions:
+Natural language: the natural language phrase to be decomposed and translated to LTL. The Natural language field must contain all of the input natural language text for the current translation.
+Decomposition: mapping of abstract variables to substring of the natural language that are independently translatable. Note that the substrings must be direct quotes of the natural language. Try to minimize the number of Decompositions while at the same time covering as much text as possible in the Natural language. Avoid short decompositions which contain very little context and are vague. Avoid decomposing text which are related and cannot be translated independently so that the decompositions themselves can be translated to an well formed LTL formula independently. Avoid decomposing words that impact how the Decomposed Natural language is translated to the Template.
+Decomposed Natural language: the natural language phrase with the decompositions replaced with their corresponding abstract variables. The Decomposed natural language alone should be used to translate to the LTL Template.
+Template: an LTL formula which is the translation of the Decomposed Natural language to LTL which must contain the abstract variables from the decomposition.
+Example Decompositions:
+
+{"Natural language": "_ready_ signal is high", "Decomposition": "{\"ASYMBOL\":\"_ready_ signal is high\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_ready_ is low", "Decomposition": "{\"ASYMBOL\":\"_ready_ is low\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "There cannot be an assertion failure thus a request must always be eventually followed up with a grant.", "Decomposition": "{\"ASYMBOL\":\"There cannot be an assertion failure thus a request must always be eventually followed up with a grant.\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_valid_ gets deasserted in next cycle", "Decomposition": "{\"ASYMBOL\":\"_valid_ gets deasserted in next cycle\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_valid_ signal holds its value in next cycle", "Decomposition": "{\"ASYMBOL\":\"_valid_ signal holds its value in next cycle\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "one of _rst_, _request_ and _ready_ signal shall be high", "Decomposition": "{\"ASYMBOL\":\"one of _rst_, _request_ and _ready_ signal shall be high\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "signal _ready_, _valid_ and _request_ are simultaneously high", "Decomposition": "{\"ASYMBOL\":\"signal _ready_, _valid_ and _request_ are simultaneously high\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_rst_ and _ready_ cannot be simultaneously high", "Decomposition": "{\"ASYMBOL\":\"_rst_ and _ready_ cannot be simultaneously high\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_ready_ signal gets asserted and de-asserted with _valid_.", "Decomposition": "{\"ASYMBOL\":\"_ready_ signal gets asserted and de-asserted with _valid_.\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_rst_ signal does not change", "Decomposition": "{\"ASYMBOL\":\"_rst_ signal does not change\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "_ready_ and _valid_ shall hold their values", "Decomposition": "{\"ASYMBOL\":\"_ready_ and _valid_ shall hold their values\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "Eventually, _request_ will be high.", "Decomposition": "{\"ASYMBOL\":\"Eventually, _request_ will be high.\"}", "Decomposed Natural language": "_ASYMBOL_", "Template": "_ASYMBOL_"}
+
+{"Natural language": "specific behavior is specified by some event, i.e., when event A is taking place, event B is also taking place. Since there cannot be assertion failures.", "Decomposition": "{\"ASYMBOL\":\"event A is taking place\", \"BSYMBOL\":\" event B is also taking place\"}", "Decomposed Natural language": "specific behavior is specified by some event, i.e., when _ASYMBOL_, _BSYMBOL_. Since there cannot be assertion failures.", "Template": "G (_ASYMBOL_ -> (_BSYMBOL_))"}
+
+{"Natural language": "the following are assumptions: During event A, event B must happen. While some event is taking place, event C must happen as well. Eventually, event A must happen. The following are gaurantees: Always eventually event C will happen. If event B is not taking place, then there must no other events taking place. Event D follows event C.", "Decomposition": "{\"ASYMBOL\":\"During event A, event B must happen. While some event is taking place, event C must happen as well. Eventually, event A must happen.\", \"BSYMBOL\":\"Always eventually event C will happen. If event B is not taking place, then there must no other events taking place. Event D follows event C.\"}", "Decomposed Natural language": "the following are assumptions: _ASYMBOL_ The following are gaurentees: _BSYMBOL_", "Template": "(_ASYMBOL_ -> (_BSYMBOL_))"}
+
+{"Natural language": "event A triggered by a read transfer implies event B, i.e., there was a grant. The grant is indicated by another event C.", "Decomposition": "{\"ASYMBOL\":\"event A triggered by a read transfer\", \"BSYMBOL\":\"event B, i.e., there was a grant. The grant is indicated by another event C.\"}", "Decomposed Natural language": "_ASYMBOL_ implies _BSYMBOL_", "Template": "G (_ASYMBOL_ -> (_BSYMBOL_))"}
+
+{"Natural language": "If a transfer is happening, then the signals must indicate whether it is a read or write transfer.", "Decomposition": "{\"ASYMBOL\":\"a transfer is happening\", \"BSYMBOL\":\"the signals must indicate whether it is a read or write transfer\"}", "Decomposed Natural language": "If _ASYMBOL_, then _BSYMBOL_.", "Template": "G (_ASYMBOL_ -> (_BSYMBOL_))"}
+
+{"Natural language": "During event A, event B must happen. While some event is taking place, event C must happen as well. Eventually, event A must happen.", "Decomposition": "{\"ASYMBOL\":\"During event A, event B must happen.\", \"BSYMBOL\":\"While some event is taking place, event C must happen as well.\", \"CSYMBOL\":\"Eventually, event A must happen.\"}", "Decomposed Natural language": "_ASYMBOL_ _BSYMBOL_ _CSYMBOL_", "Template": "(_ASYMBOL_ && (_BSYMBOL_) && (_CSYMBOL_))"}
+
+Note that you should avoiding decomposing the natural language into small phrases dependent phrases.
+Consider decomposing (Natural language,Decomposition,Decomposed Natural language,Template) following natural language phrase (the format must be in the same JSON format as shown in previous examples): {"Natural language":"When the slave is not selected by the decoder, all control signals shall be low."}

@@ -1,0 +1,24 @@
+Assumptions. We present the assumptions below, and with each assumption we mention how the assumption is obtained directly from the AMBA AHB standard.
+A1 During a locked burst transfer of unspecified length, leaving HBUSREQi high locks the bus. (The assumption A1 is a formal specification obtained from [2]). (G1 is used to convert HBUSREQi to BUSREQ in Table 7).
+A2 Leaving HREADY low locks the bus, the standard forbids it. (The assumption A2 is the formal specification obtained from the property described in page 59 of [4]).
+A3 Signals HLOCKi and HBUSREQi are asserted by AHB Master at the same time (i.e., these signals go from low to high at the same time). (The assumption A3 is the formal specification that is obtained from the property described in page 62 of [4]).
+A4 When HREADY signal is low, control signals i.e., HBURST and HTRANS should hold their values. (The assumption A4 is the formal specification obtained from page 42 of [4]).
+A5 If no transfer is taking place, the HTRANS signal cannot become SEQ in the next cycle. (The assumption A5 is the formal specification obtained from page 43 of [4]).
+A6 In burst sequence (i.e., HBURST = INCR4), if HREADY is high, the NONSEQ transfer shall always be followed by SEQ transfer. (The assumption A6 is obtained from page 42 of [4]).
+A7 The first transfer of any AHB sequence is NONSEQ in nature. (The assumption A7 is obtained from page 42 of [4]).
+A8 When no AHB Masters is making a request for bus, no transfer will take place. (The assumption A8 is obtained from [3]).
+A9 All input signals are low initially. This assumption is valid because at power up, all hardware signals are at reset values.
+
+Guarantees. The guarantees are as follows.
+G1 Variable BUSREQ points to HBUSREQi of the master that is currently granted access to the bus.
+G2 When a locked unspecified length burst starts, a new access does not start until the current master (i) releases the bus by lowering HBUSREQi. (This guarantee is obtained from page 62 of [4]).
+G3 When a length-four locked burst starts, no other accesses start until the end of the burst. We can transfer data only when HREADY is high, so the current burst ends at the fourth occurrence of HREADY. (This guarantee is obtained from page 62 of [4]).
+G4 If there is at least one bus request present and signal DECIDE is high, then GRANTED gets asserted in next cycle. (This guarantee is based on information from page 63 of [4]).
+G5 If HREADY and GRANTED signals are simultaneously high, then GRANTED gets deasserted in next cycle. If GRANTED signal is high and HREADY is low, then GRANTED signal holds its value in next cycle. (This guarantee is obtained from page 64 of [4]).
+G6 The HMASTER signal follows the grants: When HREADY is high, HMASTER is set to the master that is currently granted. It implies that no two grants may be high simultaneously and the arbiter cannot change HMASTER without giving a grant. (This guarantee is obtained from page 64 of [4]).
+G7 Whenever signal HREADY, HLOCKi and HGRANTi are simultaneously high, HMASTLOCK gets asserted in the following cycle. (This guarantee is obtained from page 62 of [4]).
+G8 When any of GRANTED or HREADY signals is low, the HMASTER and HMASTLOCK signals do not change.
+G9 Whenever DECIDE is low, HGRANTi signal do not change.
+G10 We do not grant the bus without a request, except to Master 0. If there are no requests, the bus is granted to Master 0. (This guarantee is obtained from page 63 of [4]).
+G11 We have a fair bus i.e., every master that has made a request shall be serviced eventually.
+G12 The signals DECIDE and HGRANT0 are high at first clock tick and all others are low.

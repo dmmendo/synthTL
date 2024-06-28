@@ -1,0 +1,295 @@
+Synthesis of AMBA AHB from formal specification: a case study
+Yashdeep Godhal, Krishnendu Chatterjee, Thomas A. Henzinger
+Published online: 10 July 2011 © Springer-Verlag 2011
+Abstract The standard hardware design flow involves: (a) design of an integrated circuit using a hardware description language, (b) extensive functional and formal verification, and (c) logical synthesis. However, the above-mentioned processes consume significant effort and time. An alternative approach is to use a formal specification language as a highlevel hardware description language and synthesize hardware from formal specifications. Our work is a case study of the synthesis of the widely and industrially used AMBA AHB protocol from formal specifications. Bloem et al. presented the first formal specifications for the AMBA AHB Arbiter and synthesized the AHB Arbiter circuit. However, in the first formal specification some important assumptions were missing. Our contributions are as follows: (a) We present detailed formal specifications for the AHB Arbiter incorporating the missing details, and obtain significant improvements in the synthesis results (both with respect to the number of gates in the synthesized circuit and with respect to the time taken to synthesize the circuit), and (b) we present formal specifications to generate compact circuits for the remaining two main components of AMBA AHB, namely, AHB Master and AHB Slave. Thus with systematic description we are able to automatically and completely synthesize an important and widely used industrial protocol.
+
+Keywords Synthesis, AMBA AHB protocol, Formal specification, Temporal logic
+
+1 Introduction
+
+Hardware design flow. In traditional hardware design procedure, the first step is the description of a designed circuit in hardware description language. The first step is followed by extensive verification and logical synthesis. The outcome of logical synthesis is a netlist i.e., gate level implementation of the circuit. Among the above steps, the verification step is the most time-consuming process and requires a lot of effort. An alternative approach for the design flow is to automatically synthesize the circuit from a formal specification for the circuit.
+
+Synthesis from formal specification. Historically, automatic synthesis of digital designs from temporal logic specifications has been considered as one of the most challenging problems in circuit design. The problem was first presented by Church [9] and several methods have been proposed as solutions such as in [8] and in [14]. The problem was considered again in [13] in the context of synthesizing reactive modules from a specification given in linear temporal logic (LTL). The method proposed in [13] for a given LTL specification ϕ starts by constructing a non-deterministic Büchi automaton which is converted into a deterministic Rabin automaton. This translation may require a doubly exponential complexity in the size of ϕ. The high complexity established in [13] caused synthesis to be deemed hopelessly intractable and discouraged practitioners from attempting to use it for system development. Yet, if the specification of the design is restricted to simpler automata or partial fragments of LTL, it has been shown that the synthesis problem can be solved in polynomial time. Major progress has been achieved in [12] which shows that designs can be automatically synthesized from LTL formulas belonging to the class of generalized reactivity of rank 1 (GR(1)), in time N3, where N is the size of the state space of the design. The class GR(1) covers a large class of properties that arise in specifications of circuits. The approach of [12] was implemented by Bloem et al. [6] in a tool called Anzu [11]. Anzu produces not only a BDD representing a set of possible implementations, but also an actual circuit.
+
+AMBA AHB Protocol. In this work, we study the automatic synthesis of an important and widely used industrial protocol, namely, AMBA AHB protocol. ARM’s Advanced Microcontroller Bus Architecture (AMBA) [4] specification defines an on chip communications standard for designing high-performance embedded microcontrollers. AMBA is today the de-facto standard for embedded processors because it is well documented and can be used without royalties. It is widely used in network interconnect chips, RAM controllers, Flash memory controllers, DMA controllers, level-2 cache controllers and SoCs (System on Chip) including application processors used in portable mobile devices like smartphones. A few industrial examples of its use are the IXP42X Product Line of Intel Network Processors, the Infineon gateway controller ADM5120. The most important bus defined within the AMBA specification is the advanced high-performance bus (AHB). The AHB acts as the high-performance system backbone bus. AHB supports the efficient connection of processors, on-chip memories, DMA controllers and off-chip external memory interfaces. Thus, AMBA AHB is a widely used industrial bus protocol. AMBA AHB system consists of the following main components: (a) AHB Arbiter; (b) AHB Master and (c) AHB Slave. In this work, we have synthesized the above three components of the AMBA AHB protocol.
+
+Our contributions. Bloem et al. presented the first formal specifications for AMBA AHB Arbiter and synthesized the AHB Arbiter circuit [6,7]. However, in the first formal specification some important details were missing. The first is that the HTRANS signal, which plays an important role in AHB transfers, was not considered, and the second is related to the de-assertion of the HLOCK signal. Though the result was correct, the synthesized circuit was not optimized with respect to the specifications because some important assumptions were missing. We show that by completing the specification and considering all assumptions, significant improvement is achieved in the synthesis results. The contributions of this work are as follows:
+1. We present formal specifications for a complete AHB Arbiter, and obtain a significant (order of magnitude) improvement in the synthesis results (both in the size of synthesized circuit and the time taken for synthesis). We use the same tool (Anzu) as used in [6,7]. For example, in the case of ten arbiters, the synthesis time required by our new specification is around twenty times faster, and the synthesized circuit is around fifteen times smaller as compared to [6,7]. The synthesis results of [6,7] could handle upto ten masters, whereas our synthesis results can handle 16 masters (the maximum number of masters specified by the AMBA AHB standard).
+2. We present, for the first time, the formal specifications for AMBA AHB Master and AMBA AHB Slave (which are the two remaining main components of the protocol). We are able to synthesize very compact circuits from formal specifications. Thus we are able to completely synthesize an important and widely used industrial protocol from its formal specifications.
+
+From the lessons learnt in the process of rewriting specifications, we discuss a few principles that were useful for writing the specifications for efficient synthesis.
+
+Input, output and capabilities shown. Our input is the specification of the AMBA AHB protocol in GR(1), which is a subset of LTL. The output is synthesized circuit. Our results show how the GR(1) subset of LTL can be used to efficiently synthesize completely an industrially used protocol, if the complete specifications are written systematically. Our synthesis results are obtained using the Anzu tool [11], which implements a symbolic synthesis algorithm for GR(1), and our contributions are mainly the specifications of the AMBA AHB protocol in GR(1).
+
+Organization. Our paper is organized as follows. In Sect. 2 we present the preliminaries, the basic definitions, and the classical theoretical results for synthesis. In Sect. 3, we describe the AMBA AHB protocol and its components. In Sects. 4, 5 and 6, we present the specifications and the synthesis results for AMBA AHB Arbiter, Master and Slave, respectively. We end with a discussion of our results and lessons learned in Sect. 7. Our specifications, log files and the Blif files are available in http://pub.ist.ac.at/~kchatterjee/ AMBA_AHB/.
+
+2 Preliminaries
+
+In this section, we present preliminaries related to property specification language and synthesis. The definitions of this section are standard definitions of specification and synthesis, and hence the section is similar to the definitions in [6,7].
+
+2.1 Property specification language
+
+Property specification language (PSL) is a specification language to express temporal logic specifications (a detailed description of PSL is available in [10]). In this paper, we present specifications following the familiar LTL style notations. In particular, we use G, F, and X to denote always, eventually, and next, respectively. The until_ operator requires the first operand to hold either forever or up to and including the time that the second operand holds. Thus, the temporal logic formula (Φ before Ψ ) is equivalent to (¬Ψ until_ Φ). Along with the traditional operators, we use one additional operator (until_[i]) that is not in PSL: (Φ until_[i] Ψ ) means that Φ holds either forever or up to and including the ith time that Ψ holds.
+
+2.2 Synthesis of GR(1) properties
+
+We first recall the basic results related to synthesis of GR(1) properties from [12]. We consider the question of realizability of PSL specifications (cf [13]). Consider two sets of Boolean variables, namely, X and Y , where X is the set of input variables controlled by the environment and Y is the set of system variables. The realizability questions is to determine whether there exists an open controller that satisfies the specification, where an open controller is an automaton which, at every step, reads values of the X variables and outputs values for the Y variables.
+We focus on a subset of PSL with an efficient algorithm for the realizability (synthesis) question. The specifications we consider are of the form: φ = φe → φs. We require that φα for α ∈ {e,s} can be rewritten as a conjunction of the following parts.
+
+1. φα i : a Boolean formula which characterizes the initial states of the implementation.
+2. φα t : a formula of the form ∧i(always Bi), where each Bi is a Boolean combination of variables from X ∪ Y ; and expressions of the form (next v) where v ∈ X if α = e, and v ∈ X ∪ Y otherwise.
+3. φα g—has the form ∧i∈I (always eventually Bi), where each Bi is a Boolean formula.
+
+We augment the set of variables with deterministic monitors to express formulas of other forms, such as always(p → (q until_r)), where p, q, and r are Boolean variables. A deterministic monitor is a variable whose behavior is deterministic according to the choice of the inputs and the outputs. The monitors follow the truth value of the expression nested inside the always operator. We rewrite these types of formulas to the form (always eventually b ), where b is a Boolean formula using the variables of the monitor. We note that even with the restrictions, all possible (finite state) designs can be expressed as a set of properties [6].
+The realizability problem for PSL formulas is reduced to the decision problem of determining the winner of a two player game on a graph, where the players are the system and the environment, respectively. The objective of the system is to satisfy the specification irrespective of the behavior of the environment. A game structure is a multigraph whose nodes are all the truth assignments to X and Y . The set of edges are as follows: a node v1 is connected (by an edge) to all the nodes v2 such that the truth assignments to X and Y satisfy φe t ∧φs t , where v1 supplies the assignments to the current values and v2 to the next values. We then group all the edges that agree on the assignment of X in v2 to one multi-edge. A play in the game graph is as follows: (a) in the start step, the environment chooses an assignment to X and the system chooses a state in φe i ∧ φs i that agrees with this assignment; and (b) in every following step of the play, the environment chooses a multi-edge and the system chooses one of the nodes connected to this multi-edge. The system wins if the interaction produces an infinite play that satisfies φe g → φs g.
+We solve the game to decide whether the game is winning for the environment or the system. By determinacy of the games, either the environment or the system has a winning strategy. If the environment has a winning strategy, then the specification is unrealizable. If the system has a winning strategy, then the game solving algorithm synthesizes a winning strategy. The winning strategy, represented as a BDD, is a nondeterministic representation of an implementation that realizes the specification. We summarize the result of synthesis of PSL specifications in the following theorem.
+Theorem 1 [12] Let X and Y be sets of variables controlled by the environment and the system, respectively. Consider a PSL formula φ of the form φe → φs with m conjuncts for φe and n conjuncts for φs. There is a symbolic algorithm to determine whether φ is realizable in time proportional to O(m · n · 2d+|X|+|Y | ), where d is the number of variables added by the monitors for φ.
+
+2.3 Generating circuits from BDDs
+
+We recall the basic results from [7] related to generating circuits from BDDs. The winning strategy is a BDD over the variables X, Y, X and Y  , where X are input variables, Y are output variables and the primed versions represent the next state variables. The corresponding circuit contains |X|+|Y | flipflops to store the values of the inputs and outputs in the last clock tick. Let I = X ∪ Y ∪ X and O = Y  . In every step, the circuit reads the next input values X and determines the next output values using combinational logic with inputs I and outputs O. The strategy does not prescribe a unique combinational output for every combinational input. In most cases, multiple outputs are possible, in states that are not reachable (assuming that the system follows the strategy), no outputs may be allowed.
+We write o ∈ O for a combinational output and i ∈ I for a combinational input. We denote by O \ o the set of combinational outputs excluding output o, and we denote the strategy as S. For all combinational outputs o ∈ O, we construct a function f in terms of the combinational inputs I that is compatible with the given strategy BDD. The algorithm proceeds through the combinational outputs o ∈ O one by one: First, build S  to get a BDD that restricts only o in terms of I. Then the positive and negative cofactors (p, n) of S  are built with respect to o, that is, the algorithms finds the sets of inputs for which o can be 1 (0, respectively). For the inputs that occur in the positive and in the negative cofactors, both values are allowed. The combinational inputs that are neither in the positive nor in the negative cofactor are outside of the winning region. The combinational inputs outside the winning region represent situations that cannot occur given the environment satisfies the assumptions. Thus, f has to be 1 in p ∧ ¬n and 0 in ¬p ∧ n, which give us the set of care states. We minimize the positive cofactors with the care set to obtain the function f . Finally, we substitute variable o in S by f (the substitution is necessary as combinational outputs may be related) and then proceed with the next variable.
+The resulting circuit for the specification is obtained by writing the BDDs for the functions using CUDD’s DumpBlif command [15]. The resulting circuit is then optimized using the tool ABC [5] and mapped to a library of standard cells. The tool ABC is also used to estimate the number of gates required for the circuit.
+
+3 AMBA AHB protocol
+
+In this section, we present the main components of the AMBA AHB protocol. ARM’s Advanced Microcontroller Bus Architecture (AMBA) [4] specification defines an on-chip communications standard for designing high-performance embedded microcontrollers. The most important bus defined within the AMBA specification is advanced high-performance bus (AHB). The AHB acts as the high-performance system backbone bus. AHB supports the efficient connection of processors, on-chip memories, DMA controllers and off-chip external memory interfaces. The AMBA AHB design consists of the following components:
+
+3.1 AHB master
+
+A bus master initiates read and write operations by providing address and control information. Only one bus master is allowed to use the bus actively at any given time. Hence, before initiating any transfer, it sends a request to the arbiter for accessing the bus. Once the arbiter grants master the access (to the bus), the master initiates read/write operation. Master 0 is the default master and is selected whenever there are no requests for the bus.
+
+3.2 AHB arbiter
+
+A bus arbiter ensures that at one time only one bus master is allowed to initiate data transfers. Every bus master has a REQUEST/GRANT interface to the bus arbiter. The arbiter uses a prioritization scheme to decide which bus master is the highest priority master requesting access to the bus. Each master generates HLOCKx signal which indicates that the bus master requires exclusive access to the bus. The arbitration protocol is not specified and can be defined differently for each application.
+
+3.3 AHB decoder
+
+The decoder in an AMBA system is used to perform a centralized address decoding function. It provides one select signal to each slave in the system. If the input address to the decoder belongs to the address range specified for a particular AHB slave, then the select signal from the decoder to that slave would be high. Hence the function of an AHB decoder is similar to a de-multiplexer.
+
+3.4 AHB slave
+
+A bus slave responds to transfers initiated by bus masters within the system. The slave uses a select signal HSELx from the decoder to determine when it should respond to a bus transfer. All other signals required for the transfer, such as the address and control information, are generated by the bus master. The bus slave signals back to the active master of the success, failure or waiting status of the data transfer. The AHB is a pipelined bus. It means that different masters can be in different stages of communication. A bus access can be a single transfer or a burst, which consists of a specified or unspecified number of transfers. Access to the bus is controlled by the arbiter. All devices that are connected to the bus are Moore machines, that is, the reaction of a device to an action at time t can only be seen by the other devices at time t + 1. For a system with single slave, the select signal shall always be high, if a valid address is put on bus.
+
+4 AMBA AHB arbiter synthesis
+
+In this section, we present our results related to synthesis of the AHB arbiter. We first present the arbiter signals, followed by formal specifications and synthesis results.
+
+4.1 AHB arbiter signals
+
+Figure 1 displays AHB arbiter signals. The description of these signals are as follows (the notation S[n:0] denotes an (n + 1)-bit signal):
+
+1. HBUSREQi This signal from bus master i to the bus arbiter indicates that the bus master requests access to the bus.
+2. HLOCKi This signal is output from a bus master i and input to the bus arbiter. If asserted, this signal indicates that the bus master requires locked access to the bus. No other master should be granted access to the bus until this signal is lowered.
+3. HREADY This signal is driven by the bus slave and it is input to the bus arbiter. This signal is lowered to extend a transfer. When asserted, it indicates that the slave is ready to accept the transfer.
+4. HGRANTi This signal is output of the bus arbiter and input to a bus master i. When asserted, it means that the bus master i has been granted access to the bus. It also indicates that if HREADY is high, then HMASTER= i will hold in the next clock tick.
+5. HMASTLOCK This output from the arbiter indicates that the current bus master is performing a locked sequence of transfers.
+6. HMASTER[3:0]: These signals from the arbiter indicate which bus master is currently performing a transfer.
+
+The following signals are multiplexed using HMASTER as the control signal. For example, although every master has an address bus, only the address provided by the currently active master is visible on HADDR.
+
+1. HADDR[31:0]: These signals indicate the address where read or write transaction takes place. 
+2. HBURST[1:0]: These signals inform about nature of transfer. It can be a single transfer (SINGLE), burst of four transfers (INCR4), unspecified length burst (INCR).
+3. HTRANS[1:0]: These signals indicate the type of the current transfer, which can be NONSEQ, SEQ or IDLE.
+
+4.2 Formal specifications
+
+The first set of formal specifications for AMBA AHB arbiter was given in [6]. We have (i) re-written some of the specifications for efficient synthesis with meaning kept intact, and (ii) more importantly, included important components of the specifications that were missed in [6].
+Important changes. The two important changes in our specification are as follows:
+
+1. The HTRANS[1:0] signal, that plays an important role in AHB transfers, was not used in earlier specifications. With use of the HTRANS signal, we are able to make the formal specifications more compact
+2. The other important change from the specifications of [6] is related to de-assertion of HLOCK signal. According to ARM [1], the AHB Master should de-assert the HLOCK signal when the address phase of the last transfer in the locked sequence has started. This is included in our formal specification.
+
+Along with the signals described above, we have used two auxiliary signals DECIDE and BUSREQ, that were introduced in [7]. The signal DECIDE indicates the time slot in which the arbiter decides who the next master will be and whether its access will be locked. The decision is based on HBUSREQi and HLOCKi. The signal BUSREQ points to the HBUSREQi signal of the master that currently owns the bus. Two auxiliary variables START and LOCKED, that were introduced in [6], are not used in our specification. Due to inclusion of the HTRANS signal and change of the nature in de-assertion of HLOCK signal, the START and LOCKED variables have become redundant. We have introduced a new auxiliary variable GRANTED which is driven by the arbiter. The signal GRANTED is used for deciding start of new access. When both GRANTED and HREADY signals are high simultaneously, new access shall start in next cycle. Thus a decision can be executed at the earliest two time steps after the HBUSREQi and HLOCKi signals are read.
+We follow the convention used in [6]—guarantees are properties that the arbiter must fulfill, and assumptions are properties that the arbiter’s environment must fulfill. Our specification for the arbiter, that adheres to the AMBA AHB standard consists of 9 assumptions and 12 guarantees, whereas the specification from paper [6] had 4 assumptions and 11 guarantees.
+Figure 2 shows the timing diagram for AHB arbiter signals and illustrates the behavior of the auxiliary signals with respect to other signals. Table 1 contains some sample assumptions and guarantees for the arbiter in PSL (for complete PSL specifications of the arbiter, refer to Table 7 in the appendix). The bold faced A and G signify new/re-written property whereas non-bold faced indicate existing property from [7]. The assumptions (A) and guarantees (G) for the arbiter are described below.
+
+Assumptions. We present the assumptions below, and with each assumption we mention how the assumption is obtained directly from the AMBA AHB standard.
+
+A1 During a locked burst transfer of unspecified length, leaving HBUSREQi high locks the bus. (The assumption A1 is a formal specification obtained from [2]). (G1 is used to convert HBUSREQi to BUSREQ in Table 7). 
+A2 Leaving HREADY low locks the bus, the standard forbids it. (The assumption A2 is the formal specification obtained from the property described in page 59 of [4]).
+A3 Signals HLOCKi and HBUSREQi are asserted by AHB Master at the same time (i.e., these signals go from low to high at the same time). (The assumption A3 is the formal specification that is obtained from the property described in page 62 of [4]).
+A4 When HREADY signal is low, control signals i.e., HBURST and HTRANS should hold their values. (The assumption A4 is the formal specification obtained from page 42 of [4]).
+A5 If no transfer is taking place, the HTRANS signal cannot become SEQ in the next cycle. (The assumption A5 is the formal specification obtained from page 43 of [4]).
+A6 In burst sequence (i.e., HBURST = INCR4), if HREADY is high, the NONSEQ transfer shall always be followed by SEQ transfer. (The assumption A6 is obtained from page 42 of [4]).
+A7 The first transfer of any AHB sequence is NONSEQ in nature. (The assumption A7 is obtained from page 42 of [4]).
+A8 When no AHB Masters is making a request for bus, no transfer will take place. (The assumption A8 is obtained from [3]).
+A9 All input signals are low initially. This assumption is valid because at power up, all hardware signals are at reset values.
+
+Guarantees. The guarantees are as follows.
+
+G1 Variable BUSREQ points to HBUSREQi of the master that is currently granted access to the bus.
+G2 When a locked unspecified length burst starts, a new access does not start until the current master (i) releases the bus by lowering HBUSREQi. (This guarantee is obtained from page 62 of [4]).
+G3 When a length-four locked burst starts, no other accesses start until the end of the burst. We can transfer data only when HREADY is high, so the current burst ends at the fourth occurrence of HREADY. (This guarantee is obtained from page 62 of [4]).
+G4 If there is at least one bus request present and signal DECIDE is high, then GRANTED gets asserted in next cycle. (This guarantee is based on information from page 63 of [4]).
+G5 If HREADY and GRANTED signals are simultaneously high, then GRANTED gets deasserted in next cycle. If GRANTED signal is high and HREADY is low, then GRANTED signal holds its value in next cycle. (This guarantee is obtained from page 64 of [4]).
+G6 The HMASTER signal follows the grants: When HREADY is high, HMASTER is set to the master that is currently granted. It implies that no two grants may be high simultaneously and the arbiter cannot change HMASTER without giving a grant. (This guarantee is obtained from page 64 of [4]).
+G7 Whenever signal HREADY, HLOCKi and HGRANTi are simultaneously high, HMASTLOCK gets asserted in the following cycle. (This guarantee is obtained from page 62 of [4]).
+G8 When any of GRANTED or HREADY signals is low, the HMASTER and HMASTLOCK signals do not change.
+G9 Whenever DECIDE is low, HGRANTi signal do not change.
+G10 We do not grant the bus without a request, except to Master 0. If there are no requests, the bus is granted to Master 0. (This guarantee is obtained from page 63 of [4]).
+G11 We have a fair bus i.e., every master that has made a request shall be serviced eventually.
+G12 The signals DECIDE and HGRANT0 are high at first clock tick and all others are low.
+
+Description of changes Assumptions A1, A2, A3, A9 and Guarantees G1, G2, G3, G6, G8, G9, G10, G11, G12 mentioned above are taken directly from [6]. Remaining guarantees in [6] were related to auxiliary signals which have become redundant in our case with inclusion of HTRANS signal. Out of the above, G2, G3 and G8 have been re-written with the original meaning kept intact. The rewriting was achieved as follows:
+
+1. The property G2 is mentioned in [6] as follows: always ((HMASTLOCK ∧ (HBURST = INCR) ∧ HREADY ∧ (START)) → next ((¬ START) until_ ¬BUSREQ)).
+In [6], in the formal specification of the properties G2 and G3, the authors have used an auxiliary signal “START” which is no longer required in our specification due to inclusion of HTRANS signal. The property has been modified as follows in our specification: always ((HMASTLOCK ∧ (HBURST = INCR) ∧ HREADY ∧ (HTRANS = NONSEQ)) → next ((HTRANS = SEQ) until_ ¬BUSREQ)).
+A similar modification is done for the property G3.
+2. The property G8 is re-written with the inclusion of GRANTED signal rather than DECIDE. In [6], the property is specified as follows: always ((¬DECIDE) → (LOCKED↔ next LOCKED)).
+For our specification the above property has been rewritten as: always ((¬HREADY∨¬GRANTED) → (HMASTLOCK↔ next HMASTLOCK)).
+
+Thus besides adding missed details, all assumptions and guarantees from [6] are also taken care of in our specifications.
+Summary In essence, we have added missing details about the AHB arbiter (inclusion of HTRANS signal in specifications as per the standard [4] and information about HLOCK signal de-assertion from standard [1]) and we have re-written some properties. As shown above all the assumptions and guarantee are either directly taken from [6] or obtained directly from the AMBA AHB standard. In the following subsection, we show that the systematic re-writing of the specification, and addition of the important missing details lead to significant improvement in the synthesis results.
+
+4.3 Synthesis results
+
+Anzu [11] is used to synthesize circuits from specifications. Table 2 shows comparison of time taken by Anzu to synthesize AHB arbiter for different specifications. Column 1 shows number of masters for which arbiter was synthesized. Column 2 shows data taken from Fig. 8 of [7] and Column 3 shows time taken in synthesizing specification from [7] on our machine (2GB RAM). In column 4, we have taken the minimum of columns 2 and 3 to have the best possible estimate of synthesis time for arbiter specifications in [7]. Column 5 shows the time in seconds for the arbiter synthesized using our formal specifications.
+The results (Table 2) show that using the earlier specifications from [7], the synthesis procedure fails for more than 10 masters. With our specification we can synthesize arbiter serving maximum number of masters given by the standard, 16, in around an hour. Moreover, our specifications show significant (order of magnitude) improvement over the earlier specification: for example, for arbiter serving 10 masters the synthesis of earlier specifications takes nearly 5 h, whereas our specification is synthesized in less than 16 min (thus the new results are around twenty times faster).
+In Table 3, NA corresponds to not available (no corresponding point in Fig. 9 in [7]) and NM refers to not mappable by ABC (The tool gives an error that it can not synthesize such a big circuit).
+Anzu [11] generates a file in.blif format. This file is mapped by using ABC [5] to standard library. ABC tool is also useful for counting number of gates required to realize the circuit. Table 3 shows comparison of number of gates mapped by ABC for realizing different specifications for arbiter. Column 1 shows the number of masters for which the arbiter is synthesized. Column 2 shows data taken from Fig. 8 in [7] and column 3 shows number of gates mapped by ABC tool on our machine (2GB RAM) for existing specification in [7]. In column 4 , we have taken the minimum of second and third columns to have a best estimate of number of gates for existing specifications. In column 5, gate count for our circuit synthesized from our specification. Table 3 shows that arbiter synthesized using specifications from [7] serving 10 masters has nearly 46,000 gates, whereas, the AHB arbiter synthesized with our specifications serving 10 masters has only around 3,000 gates (nearly 15 times more compact), and even arbiter serving 16 masters needs less than 8,000 gates. 
+Comparison with manual implementation. Manual implementation for arbiter serving 10 masters comprises of around 1,000 gates (see Fig. 9 of [7]). The synthesis results for our specifications generated arbiter with 3,208 gates for arbiter serving 10 masters.
+Thus by simply re-writing some specifications systematically, and adding missing details (without any change in the synthesis algorithm or the tool) we are not only able to improve the time taken for synthesis, but also significantly improve the gate count of the synthesized circuit by an order of magnitude. Graphical comparisons for arbiters serving different number of masters are shown in Figs. 3 and 4. Figure 3 shows comparison for synthesis time whereas Fig. 4 depicts comparison for gate count.
+
+5 AMBA AHB master synthesis
+
+In this section, we present the synthesis results for AHB Master: we first present the signals, then the specification, and finally the synthesis results. This module is synthesized for the first time directly from its formal specifications
+
+5.1 AHB master signals
+
+We first introduce the signals for AHB Master that have not been introduced so far.
+
+1. HWRITE: This signal from the bus master indicates the nature of transfer. When HWRITE is low, it indicates read transfer. If high, it indicates write transfer.
+2. HADDR[31:0]: These signals from the master provide information about address location where write or read transfer shall take place.
+3. HWDATA[31:0]: These signals from the master provide information about data to be written in case of write transaction.
+4. HRDATA[31:0]: These signals from the bus slave to the bus master provide information about data read in case of read transaction. 
+5. HSIZE[2:0]: This signal from the bus master to the bus slave provides information about the bus width. It can be a definite value that corresponds to one of byte (8-bit), half-word (16-bit), word (32-bit) up to 1,024 bits. In this work, data bus width is fixed to 32-bit.
+6. HRESP[1:0]: This signal from the bus slave to the bus master provides transfer response.
+
+We introduce a few auxiliary signals. They are as follows:
+
+1. REQ_VLD This signal is input to the bus master. It is used by the bus master for deciding HBUSREQ. HBUSREQ signal is asserted whenever REQ_VLD is asserted.
+2. WR This signal is input to the bus master. It indicates that write transaction shall take place. HWRITE shall be set HIGH if WR is high. 
+3. RD This signal is input to the bus master. If high, it indicates that read transaction shall take place and hence HWRITE shall be set LOW
+4. LEN1 This signal is input to the bus master. It indicates that single transfer shall take place.
+5. LEN4 This signal is input to the bus master. It informs that the transfer should be a burst sequence of four transfers.
+6. LENX This signal is input to the bus master. It informs that the transfer should be a burst sequence of unspecified length.
+7. IN_ADDR[31:0]: These signals are input to the master providing information about address. These signals are used to decide HADDR.
+8. IN_DATA[31:0]: These signals are input to the master providing information about write data. These signals are used to decide HWDATA.
+9. LAST This signal is input to the bus master. It indicates the last transfer in a sequence of transfers.
+10. OUT_DATA[31:0]: These signals from the master provide information about read data.
+11. REQ_ADDR This signal from the master indicates request for address. If this signal is high, then in the next clock cycle, master shall receive IN_ADDR.
+12. REQ_WR_DATA This signal from the master is request for data. If this signal is high, then in the next clock cycle, master shall receive IN_DATA. 
+13. REC_RD_DATA This signal from the master acts as valid signal for read data. If it is high, HRDATA shall be copied to OUT_DATA.
+
+Figure 5 shows the signals of the AHB Master and Fig. 6 shows a timing diagram for those signals. The timing diagram shows the behavior of auxiliary signals with respect to the input and the output signals.
+
+5.2 Formal specifications
+
+In the formal specification of AMBA AHB Master, we have 10 assumptions and 15 guarantees. A sample of PSL specifications of assumptions and guarantees are in Tables 4 and 5, respectively, and the complete specifications are given in Tables 8 and 9 in the appendix. The assumptions and guarantees are as follows.
+
+Assumptions. The assumptions are as follows. 
+
+A1 Length of transfer will be specified with REQ_VLD signal i.e., whenever REQ_VLD is high, one of LEN1, LEN4 and LENX signal shall be high.
+A2 Nature of transfer will be specified with REQ_VLD signal i.e., whenever REQ_VLD signal is high, at least one of RD or WR signal shall be high.
+A3 If REQ_VLD signal is low, then RD, WR, LEN1, LEN4 and LENX shall hold their values.
+A4 There cannot be conflict between signals indicating nature of transfer, thus RD and WR signal cannot be high simultaneously
+A5 There cannot be conflict between signals indicating length of transfer thus LEN1, LEN4 and LENX signals cannot be high simultaneously.
+A6 Input HRESP signal shall be OKAY throughout.
+A7 The bus is a fair one, hence every HBUSREQ shall eventually be answered.
+A8 During a locked unspecified length burst, leaving HBUSREQ high locks the bus.
+A9 Eventually, HREADY will be high.
+A10 Eventually, REQ_VLD and HGRANT signals will be low.
+
+Guarantees. The guarantees are as follows.
+
+G1 Data bus is 32-bit wide. Thus HSIZE shall be fixed to WORD throughout
+G2 HBUSREQ signal gets asserted and de-asserted with REQ_VLD.
+G3 Bus master requests only for locked transfer.
+G4 If the ongoing transfer is last transfer of an AHB sequence, then HLOCK shall be lowered.
+G5 Length four burst (HBURST = INCR4) shall end at fourth occurrence of HREADY.
+G6 HBURST shall be set according to length of the transfer indicated by LEN1, LEN4 and LENX.
+G7 First transfer of an AHB sequence is always NONSEQ in nature. All following transfers in sequence shall be SEQ in nature.
+G8 Nature of transfer shall be set according to WR and RD signals.
+G9 If HREADY is low, then all control signals shall hold their values.
+G10 When HREADY and HGRANT are simultaneously high, REQ_ADDR signal shall be high. It ensures that in next cycle, master can put address on address bus.
+G11 When both REQ_ADDR and WR signals are high, REQ_WR_DATA signal shall also be high. It ensures that data shall be put on data bus one cycle after address is put on address bus.
+G12 When a read transfer is taking place and HREADY is high, REC_RD_DATA signal shall also be high.
+G13 When REQ_ADDR is high, the input signals IN_ADDR will be copied to address bus in the next cycle.
+G14 When REQ_WR_DATA is high, the input signals IN_DATA will be copied to data bus in the next cycle.
+G15 When read transaction is in progress and HREADY is high, OUT_DATA will copy the value of HRDATAin the next cycle.
+
+All the assumptions and guarantees are again directly obtained from the AMBA AHB standard.
+
+5.3 Synthesis results
+
+The synthesis time for AHB Master is 5 s. The generated circuit is mapped using ABC tool. It has 146 gates with area 189 square units (units specific to the standard cell library). Thus the synthesized circuit is very small. Thus we are not only able to synthesize the AHB Master from its formal specifications, but the synthesized circuit is also compact. The synthesis results are comparable to manual implementation of AHB Master.
+
+6 AMBA AHB slave synthesis
+
+In this section we present the synthesis results for AHB Slave. The synthesis for this module is also performed for the first time directly from its formal specifications.
+
+6.1 AHB slave signals
+
+The signals that are useful for AHB slave are already described in previous sections. We have introduced an interface between a slave and a memory so that read and write transactions can be implemented. We are considering memory with two status signals EMPTY and FULL.
+Two auxiliary signals have also been added named START and LAST. The START signal indicates start of an AHB transfer or sequence whereas LAST signal is used to indicate last transfer of an AHB sequence.
+The signals used in this interface are shown in Fig. 7. Figure 8 shows the timing diagram from AHB slave signals. The timing diagram shows the behavior of auxiliary signals with respect to the input and the output signals. The signals used in interface between slave and memory is given below:
+
+1. FULL This signal is input to the bus slave indicating memory is full. When the memory is full, i.e.. FULL is high, no more data can be written into it without first being read.
+2. EMPTY This signal is input to the bus slave indicating memory is empty.When memory is empty, i.e., EMPTY is high, no more data can be read from it without first being written.
+3. ADDR[31:0]: These signals are output from the slave providing address information.
+4. DI[31:0]: These signals are output from the slave and input to the memory providing information about data that should be written into memory.
+5. DO[31:0]: These signals are output from the memory and input to the slave providing information about data that has been read from memory.
+6. RD This signal is input to the memory from the slave. It indicates that the read operation is being executed.
+7. WR This signal is input to the memory from the slave. It indicates that the write operation is being executed.
+
+6.2 Formal specifications
+
+In the formal specification of AMBA AHB Slave, we have seven assumptions and nine guarantees. Table 6 gives some sample PSL specifications of the assumptions and guarantees and Table 10 in the appendix gives all PSL specifications. The assumptions and guarantees are as follows
+
+Assumptions. The assumptions are as follows.
+
+A1 When the slave is not selected by the decoder, all control signals shall be low.
+A2 When HTRANS is IDLE, all control signals shall be low.
+A3 First transfer of any sequence is NONSEQ in nature.
+A4 Non-first transfer of an AHB sequence will always be SEQ in nature.
+A5 Burst sequence of length four shall end at fourth occurrence of HREADY.
+A6 If this is last transaction of a sequence and next cycle is not start of another sequence, HTRANS shall be IDLE in next cycle.
+A7 If HREADY is low, then all control signals, address and data buses shall hold their values.
+
+Guarantees. The guarantees are as follows.
+G1 When the slave is not selected by the decoder, HREADY signal shall be high.
+G2 When the slave is not selected by the decoder, HRESP shall be OKAY.
+G3 When no AHB transaction is taking place, HRESP shall be OKAY.
+G4 RD and WR signal cannot be high simultaneously.
+G5 If memory is full and write transfer is attempted, then the slave shall send an ERROR response. Similarly, if the memory is empty and a read transfer is attempted, then the slave shall send an ERROR response.
+G6 When slave is involved in a transfer, HWRITE is used to decide values of WR and RD.
+G7 When slave is involved in any transfer, signal HADDR is used to decide ADDR.
+G8 When slave is involved in write transfer, signal HWDATA is used to decide DI.
+G9 When slave is involved in read transfer, signal DO is used to decide HRDATA.
+
+All the assumptions and guarantees are obtained directly from the AMBA AHB standard.
+
+6.3 Synthesis results
+
+The synthesis time for the AHB Slave is 13 s. The circuit generated, when mapped using ABC, has 276 gates with area 545 square units (units specific to the standard cell library). Thus we are not only able to synthesize the AHB Slave from its formal specifications, but the synthesized circuit is also compact. The synthesis results are comparable to manual implementation of AHB Slave.
+
+7 Discussion
+
+In this section, we discuss about our experimentation to validate the synthesis results, and discuss some principles followed while writing our specifications.
+
+Validation. Along with the synthesis of the circuits we also experimented for validation. Anzu generates the equivalent circuit description in Verilog from the input formal specifications. We obtained the Verilog description of the AHB arbiter as output from Anzu, given our input specifications, we then integrated the arbiter with manually written AHB Master and Slave, and simulated them with the tool Icarus verilog [16] for different stimulus and interconnection. Then we simulated with the Icarus verilog tool the synthesized AHB Master along with manually written AHB Arbiter and AHB Slave, and similarly the synthesized AHB Slave with manually written AHB Arbiter and AHB Master. Finally we simulated all the synthesized Verilog descriptions (of AHB Arbiter, Master and Slave) with the Icarus verilog tool. In all cases the circuits functioned flawlessly. It is an interesting problem about how to validate (such as using model-checking or testing techniques) the results of synthesis to check that the requirements are met. However, this is beyond the scope of this paper
+
+Some principles. In the process of re-writing the formal specifications for efficient synthesis, we learnt a few lessons about writing formal specifications for synthesis. We discuss them with examples below.
+
+1. In the process of writing specifications, we first simplified the design (whenever possible), then wrote realizable specifications for the simple design that can be synthesized efficiently, and finally added necessary complexities for the complete specification. For example, while writing AHB Master specifications, we first fixed all data and address signals width to one bit. We wrote specifications for the simpler design and efficiently synthesized for the simple design. This was followed by increasing the data and the address signal widths to 32-bit and adding necessary changes to the AHB Master specifications to make it complete and synthesizable. We illustrate with an example: Consider guarantee G14 for the AHB master that states “When REQ_WR_DATA is high, the input signals IN_DATA shall be copied to data bus in the next cycle”. We first considered the above property as follows:
+
+always (REQ_WR_DATA → ((next (IN_DATA = HWDATA))),
+
+assuming both IN_DATA and HWDATA as one bit signals. After all properties were written with this simplification (address and data bus width fixed to one bit), we synthesized the design. We then proceeded to increase the bit-width of data and address bus. Such simplifications may also be useful to rule out many unrealizable specifications for the simpler design before considering the complete design.
+2. While writing specifications, we proceeded with the execution/procedural order of events. This process was very helpful to prune the set of unrealizable specifications and obtain a realizable specification. For example, while writing AHB Arbiter specifications, we proceeded with writing properties related to requesting access, granting access followed by properties related to AHB transactions. Thus we started with properties related to bus request assertions and de-assertions, e.g., guarantee G1 for the AHB arbiter: During a locked burst transfer of unspecified length, leaving HBUSREQi high locks the bus. We then added properties related to transactions, e.g. guarantee G3: When a length-four locked burst starts, no other accesses start until the end of the burst. 
+3. The use of auxiliary signals was helpful in scenarios that could not be emulated using only input output signals. For example, it is not straightforward to emulate the interactions between the AHB slave and the internal memory. Hence, we have introduced many auxiliary signals such as FULL, EMPTY, RD, WR, and then wrote specifications with the auxiliary signals to capture the required interactions.
+4. The liveness (eventual) specifications were the most time consuming and difficult ones for synthesis. Hence, special attention was devoted to write those specifications.
+
+In general, most data intensive applications are not reactive designs of degree one, and the above approach may not be ideal for those applications, but we believe that the above principles should be helpful for many control specific applications.
+Optional features The AMBA AHB standard is not a completely closed protocol and hence there are some optional features. Few optional features of AHB standard were not considered in the formal specifications (also not considered in [6] as they are not the key component of the protocol, but optional ones). For example, one optional feature is that a slave is allowed to split a burst access and request that it be continued later. For AHB master, protection controls are also allowed as an optional feature. These optional features can be included in the formal specifications in a straightforward way.

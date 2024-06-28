@@ -1,0 +1,19 @@
+Assumptions. The assumptions are as follows.
+A1 When the slave is not selected by the decoder, all control signals shall be low.
+A2 When HTRANS is IDLE, all control signals shall be low.
+A3 First transfer of any sequence is NONSEQ in nature.
+A4 Non-first transfer of an AHB sequence will always be SEQ in nature.
+A5 Burst sequence of length four shall end at fourth occurrence of HREADY.
+A6 If this is last transaction of a sequence and next cycle is not start of another sequence, HTRANS shall be IDLE in next cycle.
+A7 If HREADY is low, then all control signals, address and data buses shall hold their values.
+
+Guarantees. The guarantees are as follows.
+G1 When the slave is not selected by the decoder, HREADY signal shall be high.
+G2 When the slave is not selected by the decoder, HRESP shall be OKAY.
+G3 When no AHB transaction is taking place, HRESP shall be OKAY.
+G4 RD and WR signal cannot be high simultaneously.
+G5 If memory is full and write transfer is attempted, then the slave shall send an ERROR response. Similarly, if the memory is empty and a read transfer is attempted, then the slave shall send an ERROR response.
+G6 When slave is involved in a transfer, HWRITE is used to decide values of WR and RD.
+G7 When slave is involved in any transfer, signal HADDR is used to decide ADDR.
+G8 When slave is involved in write transfer, signal HWDATA is used to decide DI.
+G9 When slave is involved in read transfer, signal DO is used to decide HRDATA.
