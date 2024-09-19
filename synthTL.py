@@ -13,7 +13,7 @@ import copy
 import spot_utils
 
 retriever = None
-#data_filepath = 'full_amba.txt'
+#data_filepath = './metadata/full_amba.txt'
 #passages = context_retriever.get_sentences(data_filepath)
 #retriever = context_retriever.ContextRetriever(passages,mode="RAG")
 
@@ -83,7 +83,7 @@ def check_translation_semantics(node,prediction):
     return "" #pass
 
 def create_translate_prompt(node):
-    f = open("translation_prefix_prompt.txt","r")
+    f = open("./metadata/translation_prefix_prompt.txt","r")
     prefix = f.read()
     f.close()
     prefix_prompt = prefix
@@ -104,7 +104,7 @@ def create_translate_prompt(node):
     return cur_prompt
 
 def create_template_translate_prompt(node):
-    f = open("translation_prefix_prompt.txt","r")
+    f = open("./metadata/translation_prefix_prompt.txt","r")
     prefix = f.read()
     f.close()
     prefix_prompt = prefix
@@ -2194,7 +2194,7 @@ def check_decomposition(node,prediction):
     return msg
     
 def create_decompose_prompt(node):
-    f = open("decomposition_prefix_prompt.txt","r")
+    f = open("./metadata/decomposition_prefix_prompt.txt","r")
     prefix = f.read()
     f.close()
     prefix_prompt = prefix
@@ -2953,8 +2953,8 @@ def generate_validate_and_search(
     ):
     if formula_DUT is None:
         formula_DUT = "0"
-    decompose_fewshots = pd.read_excel('Decomposition_SelectFewShots.xlsx').drop(columns=['decomposition type']).to_dict('records')
-    translate_fewshots = pd.read_excel('TemplateSubTranslation_SelectFewShots.xlsx').drop(columns=['property number','property type']).to_dict('records')
+    decompose_fewshots = pd.read_excel('./metadata/Decomposition_SelectFewShots.xlsx').drop(columns=['decomposition type']).to_dict('records')
+    translate_fewshots = pd.read_excel('./metadata/TemplateSubTranslation_SelectFewShots.xlsx').drop(columns=['property number','property type']).to_dict('records')
     ## step 1: generation
     cur_graph = Node(test_str,
             translate_fewshots=translate_fewshots,
