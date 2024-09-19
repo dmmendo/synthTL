@@ -12,6 +12,17 @@ import copy
 
 import spot_utils
 
+retriever = None
+#data_filepath = 'full_amba.txt'
+#passages = context_retriever.get_sentences(data_filepath)
+#retriever = context_retriever.ContextRetriever(passages,mode="RAG")
+
+#need to set the DUT variable list:
+cur_DUT_variables = None
+
+#_LLM_NAME_="gpt-3.5-turbo-0125"
+_LLM_NAME_="gpt-4-0125-preview"
+
 def check_translation_parsable(prediction):
     try:
         pred_dict = json.loads(prediction)
@@ -106,7 +117,7 @@ def create_template_translate_prompt(node):
         assert_text = assert_text.replace(dcmp_node.assert_text,"_"+dcmp_var+"_")
 
     #cur_var_list = get_valid_variables(assert_text)+["_"+entry+"_"for entry in node.dcmp_dict.keys()]
-    if len(node.dcmp_dict) == 0:   
+    if retriever is not None and len(node.dcmp_dict) == 0:   
         context_list = [phrase for phrase in retriever.search(query=assert_text,rerank_top_k=5) if node.assert_text not in phrase]
         retrieval_txt = "\nAccount for the following context if needed: "+"\n".join(context_list)
         cur_var_list = get_valid_variables(assert_text)
@@ -144,7 +155,9 @@ def get_variables_from_NL(assert_text):
     return list(set(res_list))
 
 def get_valid_variables(assert_text):
-    return spot_utils.get_variables(formula_DUT)    
+    assert cur_DUT_variables is not None
+    return cur_DUT_variables
+    #return spot_utils.get_variables(formula_DUT)    
 
 def translate_LLM(node,t_type='regular',given_prompt=None,max_try=5):
     if given_prompt is not None:
@@ -157,7 +170,8 @@ def translate_LLM(node,t_type='regular',given_prompt=None,max_try=5):
         assert False, "translate t_type " + t_type + " not found!"
     
     pred,is_valid = get_checked_prediction(cur_prompt,node,check_translation,max_try=max_try,
-                                           model="gpt-3.5-turbo-0125"
+                                           model=_LLM_NAME_
+                                           #model="gpt-3.5-turbo-0125"
                                            #model="gpt-4-0125-preview"
                                           )
     #response = get_inference_response(cur_prompt,model="gpt-3.5-turbo-0125")
@@ -197,20 +211,8 @@ def construct_retranslation_dict(input_node_list,num_try=3,inner_max_try=5,valid
         #for try_count in range(num_try):
             node_to_retranslate = copy_graph(cur_node)
             node_to_retranslate.parent = cur_node.parent
-            print("calling to translate!")
-            time.sleep(0.2)
             cur_prompt, pred = node_to_retranslate.translate(mode='LLM',t_type='template',given_prompt=this_prompt,max_try=inner_max_try)
-            #error_msg = check_node(node_to_retranslate,formula_DUT)
-            #if error_msg != "":
-            #    this_prompt = cur_prompt + "\n" + pred + error_msg
-            print("in node check!")
-            print(get_node_translation(node_to_retranslate))
-            time.sleep(0.2)
             is_valid = check_isolated_node_validity(node_to_retranslate)
-            print("finished node check!")
-            #if is_valid:
-            #    error_msg = "Please provide another plausible translation"
-            #    this_prompt = cur_prompt + "\n" + pred + error_msg
             if not valid_only or is_valid:
                 found_valid = True
                 retranslation_dict[node_id].append(get_node_translation(node_to_retranslate))
@@ -843,7 +845,7 @@ def get_culprit_batch(graph_list,formula_DUT,depth=1):
         for node in get_all_descendants(g):
             cur_conjuct = get_conjucts_for_node(node,debug=False,depth=depth)
             translation_list.append(cur_conjuct)
-    hold_translation_set = find_hold_set_rawconjmerge(translation_list,formula_DUT=formula_DUT)
+    hold_translation_set = batch_model_check(translation_list,formula_DUT=formula_DUT)
     res_list = []
     i = 0
     for g in graph_list:
@@ -1098,9 +1100,6 @@ def get_deconstrain_decomposition_for_node(cur_graph,node,retranslation_dict,red
     to_constrain = classify_node_for_deconstrain(cur_graph,node,visited_set=visited_set)
     if to_constrain not in cur_cache[get_node_hash(node)]:
         decomposition_list = get_possible_decomposition_for_node(node,redecomposition_dict)
-        topk = 1
-        select_idx_list = np.argsort([calc_decompose_coverage(node.assert_text,new_str_dcmp_dict) for new_str_dcmp_dict in decomposition_list])[::-1]
-        decomposition_list = [decomposition_list[idx] for idx in select_idx_list[:topk]]
         cur_cache[get_node_hash(node)][to_constrain] = []
     else:
         return [copy_graph(entry) for entry in cur_cache[get_node_hash(node)][to_constrain]]
@@ -1158,7 +1157,7 @@ def get_deconstrain_decomposition_for_node(cur_graph,node,retranslation_dict,red
     if check_trivial:
         #print("before",len(cur_res_list))
         graph_translation_list = [g.translation for g in cur_cache[get_node_hash(node)][to_constrain]]
-        trivial_translation_set = find_hold_set_rawconjmerge(graph_translation_list,formula_DUT="1")
+        trivial_translation_set = batch_model_check(graph_translation_list,formula_DUT="1")
         cur_cache[get_node_hash(node)][to_constrain] = [g for g in cur_cache[get_node_hash(node)][to_constrain] if g.translation not in trivial_translation_set]
         #print("after",len(cur_res_list))
 
@@ -1171,6 +1170,7 @@ def get_deconstrain_decomposition_for_node(cur_graph,node,retranslation_dict,red
     res_list = [copy_graph(entry) for entry in cur_cache[get_node_hash(node)][to_constrain]]
     return res_list
 
+"""
 def get_deconstrain_graph(cur_graph,formula_DUT,retranslation_dict,redecomposition_dict,
                           cur_skip_set=set(),dec_cache={},check_graph=False,early_stop=False):
     
@@ -1228,6 +1228,7 @@ def get_deconstrain_graph(cur_graph,formula_DUT,retranslation_dict,redecompositi
                         if len(holds_graph_list) > 0:
                             return holds_graph_list
     return []
+"""
 
 def get_most_senior_node(node_list):
     res_list = []
@@ -2107,15 +2108,15 @@ def run_batch_mc(translation_list,conj_dict,g_to_count,formula_DUT,early_stop=Fa
             del conj_dict[clause]
     return active_set    
 
-def find_hold_set_rawconjmerge(translation_list,formula_DUT,early_stop=False):
+def batch_model_check(translation_list,formula_DUT,early_stop=False):
     conj_dict, g_to_count = get_conj_dict(translation_list,depth=1)
     return run_batch_mc(translation_list,conj_dict,g_to_count,formula_DUT,early_stop=early_stop)
 
 def get_conjmerge_holds_graph_list(graph_list,formula_DUT,check_graph=False,early_stop=False):
     assert not check_graph, "check graph is inefficient, disable for now"
     translation_list = [g.translation for g in graph_list]
-    trivial_set = find_hold_set_rawconjmerge(translation_list,"1")
-    active_set = find_hold_set_rawconjmerge(list(set(translation_list)-trivial_set),formula_DUT,early_stop=early_stop)
+    trivial_set = batch_model_check(translation_list,"1")
+    active_set = batch_model_check(list(set(translation_list)-trivial_set),formula_DUT,early_stop=early_stop)
     return [g for g in graph_list if g.translation in active_set]
 
 def filter_by_variable_names(cur_graph,node_list,formula_DUT):
@@ -2125,64 +2126,6 @@ def filter_by_variable_names(cur_graph,node_list,formula_DUT):
         node_var_set = set(spot_utils.get_variables(node.translation))
         if len(node_var_set.intersection(targ_var_set)):
             res_list.append(node)
-    return res_list
-
-def get_ablate_culprit_batch(graph_list,formula_DUT):
-    all_translation_list = []
-    for g in graph_list:
-        for node in get_all_descendants(g):
-            true_ablate_f, false_ablate_f = get_ablate_formulae_for_node(g,node)
-            all_translation_list.append(true_ablate_f)
-            all_translation_list.append(false_ablate_f)
-    hold_translation_set = find_hold_set_rawconjmerge(all_translation_list,formula_DUT=formula_DUT)
-    res_list = []
-    i = 0
-    for g in graph_list:
-        possible_dontcare_node_list = []
-        possible_dontcare_translation_list = []
-        for node in get_all_descendants(g):
-            if all_translation_list[i] not in hold_translation_set \
-                and all_translation_list[i+1] not in hold_translation_set:
-                possible_dontcare_node_list.append(node)
-                possible_dontcare_translation_list.append(all_translation_list[i])
-                possible_dontcare_translation_list.append(all_translation_list[i+1])
-            i += 2
-        graph_contain_set = find_hold_set_rawconjmerge(possible_dontcare_translation_list,formula_DUT=g.translation)
-        dontcare_list = []
-        dontcare_mode = []
-        j = 0
-        for node in possible_dontcare_node_list:
-            if node.translation != "0" and node.translation != "1" and \
-                ((possible_dontcare_translation_list[j] in graph_contain_set) != (possible_dontcare_translation_list[j+1] in graph_contain_set)):
-                if (possible_dontcare_translation_list[j] in graph_contain_set):
-                    dontcare_list.append(node)
-                    dontcare_mode.append("1")
-                elif (possible_dontcare_translation_list[j+1] in graph_contain_set):
-                    dontcare_list.append(node)
-                    dontcare_mode.append("0")
-            j += 2
-        #cur_culprit_list = [node for node in get_all_descendants(g) if not node in dontcare_list]
-        select_idx = [k for k in range(len(dontcare_list)) if set(get_all_descendants(dontcare_list[k])).issubset(set(dontcare_list))]
-        dontcare_list = [dontcare_list[idx] for idx in select_idx]
-        dontcare_mode = [dontcare_mode[idx] for idx in select_idx]
-        if len(dontcare_list) > 0:
-            most_senior_dc_list = get_most_senior_node(dontcare_list)
-            most_senior_dc_mode = [dontcare_mode[dontcare_list.index(node)] for node in most_senior_dc_list]
-            largest_idx = np.argmax([len(get_all_descendants(node)) for node in most_senior_dc_list])
-            dontcare_node = most_senior_dc_list[largest_idx]
-            new_graph = copy_graph(g)
-            new_node = find_descendant(new_graph,get_unique_node_id(dontcare_node))
-            new_node.translation = most_senior_dc_mode[largest_idx]
-            new_node.dcmp_dict = {}
-            dfs_translate(new_graph,mode='NoRun',t_type='template')
-            assert spot_utils.check_formula_contains_formula(new_graph.translation,g.translation,use_contains_split=True)
-            new_culprit_list = get_ablate_culprit_batch([new_graph],formula_DUT)[0]
-            new_culprit_ids = [get_unique_node_id(node) for node in new_culprit_list if node != new_node]
-            cur_culprit_list = [node for node in get_all_descendants(g) if get_unique_node_id(node) in new_culprit_ids]
-            #cur_culprit_list = [node for node in get_all_descendants(g) if not node in get_all_descendants(dontcare_node)]
-        else:
-            cur_culprit_list = [node for node in get_all_descendants(g)]
-        res_list.append(cur_culprit_list)
     return res_list
 
 def check_decomposition_parsable(node,prediction):
@@ -2285,7 +2228,8 @@ def postprocess_decompose(node,pred):
 def decompose_LLM(node,max_try=5):
     cur_prompt = create_decompose_prompt(node)
     pred,is_pass = get_checked_prediction(cur_prompt,node,check_decomposition,max_try=max_try,
-                                          model="gpt-3.5-turbo-0125"
+                                          model=_LLM_NAME_
+                                          #model="gpt-3.5-turbo-0125"
                                           #model="gpt-4-0125-preview" 
                                          )
     #response = get_inference_response(cur_prompt,model="gpt-3.5-turbo-0125")
@@ -2342,6 +2286,7 @@ def get_graph_diff(graph_list):
         #all([node.parent is None or get_unique_node_id(node.parent) in common_root_set for node in all_node_list])
     return mindiff_node_ids
 
+"""
 def search_holds_graph(root,formula_DUT,retranslation_dict,redecomposition_dict):
     dec_graph_list = get_deconstrain_decomposition_for_node(root,root,retranslation_dict,redecomposition_dict,
                                               cur_cache={},
@@ -2351,6 +2296,7 @@ def search_holds_graph(root,formula_DUT,retranslation_dict,redecomposition_dict)
                                               check_trivial=False,
                                               filter_res=False)
     return [], dec_graph_list
+"""
 
 def graph_to_decompose_cache(cur_graph):
     cur_decompose_cache = {}
@@ -2401,7 +2347,7 @@ def constrain_decomposition_for_node(cur_graph,node,retranslation_dict,redecompo
                     all_dec_graph_list.append(holds_graph_list[0])
                 else:
                     graph_translation_list = [g.translation for g in dec_graph_list]
-                    trivial_set = find_hold_set_rawconjmerge(graph_translation_list,"1")
+                    trivial_set = batch_model_check(graph_translation_list,"1")
                     trivial_graph_list = [g for g in dec_graph_list if g.translation in trivial_set]
                     if len(trivial_graph_list) == len(graph_translation_list):
                         all_dec_graph_list.append(trivial_graph_list[0])
@@ -2441,11 +2387,625 @@ def constrain_decomposition_for_node(cur_graph,node,retranslation_dict,redecompo
     visited_set.update(cur_visited_set)
     return res_list
 
-##define context retrieval method
-data_filepath = 'full_amba.txt'
-passages = context_retriever.get_sentences(data_filepath)
-retriever = context_retriever.ContextRetriever(passages,mode="RAG")
+def enforce_correct_redecomposition_dict(redecomposition_dict,correct_decompose_dict,select_one=False,delete_incorrect=False):
+    missing_count = 0
+    for assert_text,str_dcmp_dict in correct_decompose_dict.items():
+        if assert_text not in redecomposition_dict:
+            print("missing:",assert_text)
+            missing_count += 1
+            redecomposition_dict[assert_text] = [correct_decompose_dict[assert_text]]
+    to_delete_list = []
+    for assert_text,possible_dcmp_dict_list in redecomposition_dict.items():
+        if assert_text not in correct_decompose_dict:
+            to_delete_list.append(assert_text)
+            continue
+        dcmp_id_list = set([get_abstract_node_id_from_dcmpdict(assert_text,entry) for entry in possible_dcmp_dict_list])
+        correct_dcmp_id = get_abstract_node_id_from_dcmpdict(assert_text,correct_decompose_dict[assert_text])
+        if correct_dcmp_id not in dcmp_id_list:
+            print(correct_dcmp_id,dcmp_id_list)
+            missing_count += 1
+            if select_one or len(redecomposition_dict[assert_text]) == 0 or assert_text not in redecomposition_dict:
+                redecomposition_dict[assert_text] = [correct_decompose_dict[assert_text]]
+            else:
+                redecomposition_dict[assert_text][-1] = correct_decompose_dict[assert_text]
+    if delete_incorrect:
+        for entry in to_delete_list:
+            del redecomposition_dict[entry]
+    print("num corrected dcmp:",missing_count)
 
-##define ground truth formula here
-translate_dict = create_translate_dict('rawcontext_decomposition-slave.xlsx')
-formula_DUT = translate_dict[open("specs/amba_slave_godhal.txt").read()]
+def enforce_correct_retranslation_dict(retranslation_dict,correct_translate_dict,select_one=False):
+    no_correct = 0
+    for node_id in correct_translate_dict:
+        if node_id not in retranslation_dict:
+            no_correct += 1
+            retranslation_dict[node_id] = [correct_translate_dict[node_id]]
+            continue
+        found_correct = False
+        for cur_translation in retranslation_dict[node_id]:
+            if spot_utils.check_wellformed(cur_translation) and spot_utils.check_equivalent(cur_translation,correct_translate_dict[node_id],use_contains_split=True):
+                found_correct = True
+        if not found_correct:
+            no_correct += 1
+            print(node_id,correct_translate_dict[node_id])
+            if select_one or len(retranslation_dict[node_id]) == 0:
+                retranslation_dict[node_id] = [correct_translate_dict[node_id]]
+            else:
+                retranslation_dict[node_id][-1] = correct_translate_dict[node_id]
+                
+    print("num corrected translations:",no_correct)
+
+"""
+def enforce_correct_nodes(cur_graph,node_list=None,retranslation_dict=None):
+    if node_list is None:
+        node_list = get_all_descendants(cur_graph)
+    for node in node_list:
+        if retranslation_dict is None:
+            cur_translation = translate_dict[get_abstract_node_id(node)]
+        else:
+            cur_translation = retranslation_dict[get_abstract_node_id(node)][0]
+        if len(node.dcmp_dict) == 0:
+            node.translation = cur_translation
+        else:
+            node.template_translation = cur_translation
+    dfs_translate(cur_graph,mode='NoRun',t_type='template')
+"""
+
+def remove_bad_decompositions(redecomposition_dict,retranslation_dict):
+    to_translate = []
+    to_delete = []
+    for assert_text,dcmp_dict_list in redecomposition_dict.items():
+        abs_id_list = [get_abstract_node_id_from_dcmpdict(assert_text,entry) for entry in dcmp_dict_list]
+        idx_to_delete = []
+        for i in range(len(abs_id_list)):
+            abs_id = abs_id_list[i]
+            if abs_id in retranslation_dict and len(retranslation_dict[abs_id]) == 0:
+                #print("found bad!")
+                idx_to_delete.append(abs_id_list.index(abs_id))
+                del retranslation_dict[abs_id]
+        redecomposition_dict[assert_text] = [dcmp_dict_list[i] for i in range(len(abs_id_list)) if i not in idx_to_delete]
+        if len(redecomposition_dict[assert_text]) == 0:
+            #print("removing decomposed node")
+            #print(assert_text)
+            to_delete.append(assert_text)
+    for assert_text in to_delete:
+        del redecomposition_dict[assert_text]
+    for k in redecomposition_dict.keys():
+        for i in range(len(redecomposition_dict[k])):
+            redecomposition_dict[k][i] = dict((abs_var,dcmp_txt) for abs_var,dcmp_txt in redecomposition_dict[k][i].items() if dcmp_txt not in to_delete)
+    
+    for assert_text,dcmp_dict_list in redecomposition_dict.items():
+        abs_id_list = [get_abstract_node_id_from_dcmpdict(assert_text,entry) for entry in dcmp_dict_list]
+        for i in range(len(abs_id_list)):
+            abs_id = abs_id_list[i]
+            if abs_id not in retranslation_dict:
+                to_translate.append((assert_text,dcmp_dict_list[i]))    
+    return to_translate
+
+def inplace_add_dict1_to_dict2(dict1,dict2):
+    for k,v in dict1.items():
+        if k in dict2:
+            dict2[k] += dict1[k]
+        else:
+            dict2[k] = dict1[k]
+        
+def construct_redecomposition_and_retranslation_dict(
+    assert_text,
+    num_try=3,
+    inner_max_try=1,
+    redecomposition_dict=None,
+    retranslation_dict=None,
+    translate_fewshots=None,
+    decompose_fewshots=None):
+    if redecomposition_dict is None:
+        redecomposition_dict = {} #literal node id to list of dicts (decompositions)
+    if retranslation_dict is None:
+        retranslation_dict = {} #abstract node_id to list of nodes (translations)
+    all_node_list = []
+    work_list = [assert_text]
+    while len(work_list) > 0:
+        cur_assert_text = work_list.pop(0)
+        if cur_assert_text not in redecomposition_dict:
+            redecomposition_dict[cur_assert_text] = []
+            for try_count in range(num_try):
+                cur_node = Node(cur_assert_text,translate_fewshots=translate_fewshots,decompose_fewshots=decompose_fewshots)
+                cur_node.decompose(mode='LLM',max_try=inner_max_try)
+                if len(cur_node.dcmp_dict) > 1:
+                    work_list += [entry.assert_text for entry in cur_node.dcmp_dict.values()]
+                else:
+                    cur_node.set_dcmp_dict({})
+                redecomposition_dict[cur_assert_text].append(dict( (k,v.assert_text) for k,v in cur_node.dcmp_dict.items()))
+                all_node_list.append(cur_node)
+    
+    cur_node_list = [node for node in all_node_list if get_abstract_node_id(node) not in retranslation_dict]
+    new_dict = construct_retranslation_dict(input_node_list=cur_node_list,num_try=num_try,valid_only=True,inner_max_try=inner_max_try)
+    inplace_add_dict1_to_dict2(new_dict,retranslation_dict)
+    to_translate = remove_bad_decompositions(redecomposition_dict,retranslation_dict)
+    while len(to_translate) > 0:
+        cur_node_list = []
+        for txt,str_dcmp_dict in to_translate:
+            cur_node = Node(txt,translate_fewshots=translate_fewshots,decompose_fewshots=decompose_fewshots)
+            cur_node.set_dcmp_dict(str_dcmp_dict)
+            if get_abstract_node_id(cur_node) not in retranslation_dict:
+                cur_node_list.append(cur_node)
+        new_dict = construct_retranslation_dict(input_node_list=cur_node_list,num_try=num_try,valid_only=True,inner_max_try=inner_max_try)
+        inplace_add_dict1_to_dict2(new_dict,retranslation_dict)
+        to_translate = remove_bad_decompositions(redecomposition_dict,retranslation_dict)
+    return redecomposition_dict, retranslation_dict
+
+def count_graphs(cur_graph,retranslation_dict,redecomposition_dict,mode='ours',dcmp_mode="all"):
+    assert mode in ["one_translation","baseline","ours"]
+    assert dcmp_mode in ["one_dcmp","all"]
+    total_count = 0
+    if dcmp_mode == "one_dcmp":
+        cur_dcmp_list = get_possible_decomposition_for_node(cur_graph,redecomposition_dict)
+        select_idx = np.argmax([calc_decompose_coverage(cur_graph.assert_text,str_dcmp_dict) for str_dcmp_dict in cur_dcmp_list])
+        cur_dcmp_list = [cur_dcmp_list[select_idx]]
+    else:
+        cur_dcmp_list = get_possible_decomposition_for_node(cur_graph,redecomposition_dict)
+    
+    for str_dcmp_dict in cur_dcmp_list:
+        cur_node = copy_graph(cur_graph)
+        cur_node.set_dcmp_dict(str_dcmp_dict)
+        if get_abstract_node_id(cur_node) in retranslation_dict:
+            translation_list = remove_duplicate_translations(get_retranslations_for_node(cur_node,retranslation_dict))
+            dec_amortized_list = get_deconstrain_translation_helper(translation_list,to_constrain=False)
+            con_amortized_list = get_deconstrain_translation_helper(translation_list,to_constrain=True)
+            if mode == "baseline":
+                cur_count = len(translation_list)
+            elif mode == "ours":
+                cur_count = np.maximum(len(dec_amortized_list),len(con_amortized_list))
+            elif mode == "one_translation":
+                cur_count = 1
+            else:
+                assert False
+            for dcmp_node in cur_node.dcmp_dict.values():
+                if get_literal_node_id(dcmp_node) in redecomposition_dict:
+                    cur_count *= count_graphs(dcmp_node,retranslation_dict,redecomposition_dict,mode=mode,dcmp_mode=dcmp_mode)
+        else:
+            cur_count = 1
+        total_count += cur_count
+    return total_count
+
+def get_next_candidate_set(root,retranslation_dict,redecomposition_dict,prev_select_ids):
+    dec_graph_list = get_deconstrain_decomposition_for_node(root,root,retranslation_dict,redecomposition_dict,
+                                                  cur_cache={},
+                                                  skip_set=set(),
+                                                  visited_set=set(),
+                                                  check_trivial=False,
+                                                  filter_res=False,
+                                                  mode="prune")
+    best_g = dec_graph_list[np.random.randint(len(dec_graph_list))]
+    return get_all_descendants(best_g)
+
+def get_subgraph_grouping_from_nodelist(node_list):
+    parent_node_list = get_most_senior_node(node_list)
+    res_list = [[node] for node in parent_node_list]
+    for node in node_list:
+        if not node in parent_node_list:
+            for i in range(len(parent_node_list)):
+                if node in get_all_descendants(parent_node_list[i]):
+                    res_list[i].append(node)
+    for tmp_list in res_list:
+        for i in range(1,len(tmp_list)):
+            #assume they are ordered
+            assert not tmp_list[0] in get_all_descendants(tmp_list[i]) 
+    return res_list
+
+def add_decomposition(assert_text,str_dcmp_dict,cur_retranslation_dict,cur_redecomposition_dict,cur_num_try,
+                     translate_fewshots,decompose_fewshots):
+    for cur_assert_text in str_dcmp_dict.values():
+        if cur_assert_text not in cur_redecomposition_dict:
+            new_redecomposition_dict,new_retranslation_dict = construct_redecomposition_and_retranslation_dict(
+                                                                assert_text=cur_assert_text,
+                                                                num_try=cur_num_try,
+                                                                inner_max_try=2)
+            for k,v in new_redecomposition_dict.items():
+                if k not in cur_redecomposition_dict:
+                    cur_redecomposition_dict[k] = v
+            for k,v in new_retranslation_dict.items():
+                if k not in cur_retranslation_dict:
+                    cur_retranslation_dict[k] = v
+    
+    new_node = Node(assert_text,translate_fewshots=translate_fewshots,decompose_fewshots=decompose_fewshots)
+    new_node.set_dcmp_dict(str_dcmp_dict)
+    new_retranslation_dict = construct_retranslation_dict(input_node_list=[new_node],num_try=cur_num_try,valid_only=True,inner_max_try=2)
+    while len(new_retranslation_dict[get_abstract_node_id(new_node)]) == 0:
+        new_retranslation_dict = construct_retranslation_dict(input_node_list=[new_node],num_try=cur_num_try,valid_only=True,inner_max_try=2)
+    for k,v in new_retranslation_dict.items():
+        if k not in cur_retranslation_dict:
+            cur_retranslation_dict[k] = v
+
+def is_dcmp_in_dict(txt,str_dcmp_dict,dcmp_dict_cache):
+    return (txt in dcmp_dict_cache and \
+     set([v for v in str_dcmp_dict.values()]) in [set([v for v in dcmp_dict.values()]) for dcmp_dict in dcmp_dict_cache[txt]])
+
+def query_oracle_decomposition_dict(redecomposition_dict,decompose_cache,bad_decompose_cache):
+    for txt,dcmp_dict_list in redecomposition_dict.items():
+        for str_dcmp_dict in dcmp_dict_list:
+            if not is_dcmp_in_dict(txt,str_dcmp_dict,decompose_cache) and not is_dcmp_in_dict(txt,str_dcmp_dict,bad_decompose_cache):
+                #clear_output(wait=True)
+                print("new decomposition found:")
+                print("original text:")
+                print(txt)
+                print()
+                print("abstracted natural language:")
+                print(get_abstract_node_id_from_dcmpdict(txt,str_dcmp_dict))
+                print()
+                print("num dcmp nodes:",len(str_dcmp_dict.values()))
+                if len(str_dcmp_dict.values()) == 0:
+                    print("(no decomposition)")
+                
+                response = ""
+                while "y" not in response and "n" not in response:
+                    try:
+                        response = input("is this a desired and valid decomposition? y/n")
+                    except:
+                        response = ""
+                        print("failed to get input")
+                if "y" in response:
+                    if txt not in decompose_cache:
+                        decompose_cache[txt] = []
+                    decompose_cache[txt].append(str_dcmp_dict)
+                elif "n" in response:
+                    if txt not in bad_decompose_cache:
+                        bad_decompose_cache[txt] = []
+                    bad_decompose_cache[txt].append(str_dcmp_dict)
+                else:
+                    assert False
+                print()
+
+def is_translation_in_dict(abs_node_id,translation,translate_cache):
+    return abs_node_id in translate_cache and any([spot_utils.check_equivalent(translation,entry) for entry in translate_cache[abs_node_id]])
+
+def query_oracle_translation_dict(retranslation_dict,translate_cache,bad_translate_cache):
+    for abstract_node_id in retranslation_dict:
+        for cur_translation in retranslation_dict[abstract_node_id]:
+            if not is_translation_in_dict(abstract_node_id,cur_translation,translate_cache) \
+                and not is_translation_in_dict(abstract_node_id,cur_translation,bad_translate_cache):
+                #clear_output(wait=True)
+                print("new translation found:")
+                print("abstracted natural language:")
+                print(abstract_node_id)
+                print()
+                print("translation:")
+                print(cur_translation)
+                print()
+                
+                response = ""
+                while "y" not in response and "n" not in response:
+                    try:
+                        response = input("is this a correct translation? y/n")
+                    except:
+                        response = ""
+                        print("failed to get input")
+                if "y" in response:
+                    if abstract_node_id not in translate_cache:
+                        translate_cache[abstract_node_id] = []
+                    translate_cache[abstract_node_id].append(cur_translation)
+                elif "n" in response:
+                    if abstract_node_id not in bad_translate_cache:
+                        bad_translate_cache[abstract_node_id] = []
+                    bad_translate_cache[abstract_node_id].append(cur_translation)
+                else:
+                    assert False
+                print()
+
+def query_oracle_for_node_decomposition(cur_node,decompose_cache):
+    test_node = copy_graph(cur_node)
+    while True:
+        is_valid_response = False
+        #clear_output(wait=True)
+        print("please provide a decomposition for the following:")
+        print(cur_node.assert_text)
+        print()
+        print("a decomposition should be provided as a JSON parseable dictionary mapping symbols (as strings) to sub-strings of the NL:")
+        print("{\"[SYMBOL_NAME]\":\"[SUB_STRING]\"}")
+        print("NOTE: the dictionary can be empty ({}) indicating no decomposition")
+        while not is_valid_response:
+            try:
+                response = input("input:")
+            except:
+                print("failed to get input")
+                continue
+            if response == "":
+                response = "{}"
+            try:
+                str_dcmp_dict = json.loads(response)
+            except:
+                print("error from input!")
+                continue
+            test_node.set_dcmp_dict(str_dcmp_dict)
+            is_valid_response = True
+        #clear_output(wait=True)
+        print("original text:")
+        print(test_node.assert_text)
+        print()
+        print("abstracted natural language:")
+        print(get_abstract_node_id(test_node))
+        print()
+        print("num dcmp nodes:",len(test_node.dcmp_dict.values()))    
+        
+        response = ""
+        while "y" not in response and "n" not in response:
+            try:
+                response = input("is this a correct decomposition? y/n")
+            except:
+                response = ""
+                print("failed to get input")
+        if "y" in response:
+            if get_literal_node_id(test_node) not in decompose_cache:
+                decompose_cache[get_literal_node_id(test_node)] = []
+            decompose_cache[get_literal_node_id(test_node)].append(str_dcmp_dict)
+            break
+        print()
+
+def query_oracle_for_node_translation(cur_node,translate_cache):
+    while True:
+        is_valid_response = False
+        #clear_output(wait=True)
+        print("please provide a translation for the following:")
+        print(get_abstract_node_id(cur_node))
+        print()
+        max_attempt = 5
+        attempt_count = 0
+        while not is_valid_response and attempt_count < max_attempt:
+            attempt_count += 1
+            try:
+                response = input("input:")
+            except:
+                print("failed to get input")
+                continue
+            res_list = []
+            for cur_translation in response.split(";"):
+                test_node = copy_graph(cur_node)
+                if len(test_node.dcmp_dict) == 0:
+                    test_node.translation = cur_translation
+                else:
+                    test_node.template_translation = cur_translation
+                is_valid_response = check_isolated_node_validity(test_node)
+                res_list.append(test_node)
+                if not is_valid_response:
+                    break
+            if not is_valid_response:
+                print("abstract variables:",test_node.dcmp_dict.keys())
+                print(spot_utils.check_wellformed(cur_translation))
+                print("\"" not in cur_translation)
+                print(len([1 for entry in test_node.dcmp_dict.keys() if "_"+entry+"_" in cur_translation]) == len(test_node.dcmp_dict))
+                print(not spot_utils.check_equivalent("1",cur_translation))
+                print(not spot_utils.check_equivalent("0",cur_translation))
+                print(set(spot_utils.get_variables(cur_translation)).issubset(set(get_valid_variables(node.assert_text)+["_"+entry+"_"for entry in test_node.dcmp_dict.keys()])))
+                print(["_"+entry+"_"for entry in test_node.dcmp_dict.keys()])
+                print(check_node_contributing(test_node))
+        assert is_valid_response
+        #clear_output(wait=True)
+        print("please confirm your entry")
+        print("abstracted natural language:")
+        print(get_abstract_node_id(test_node))
+        print()
+        print("translation:")
+        for test_node in res_list:
+            print(get_node_translation(test_node))
+        print()
+        response = ""
+        while "y" not in response and "n" not in response:
+            try:
+                response = input("is this a correct translation? y/n")
+            except:
+                response = ""
+                print("failed to get input")
+        if "y" in response:
+            for test_node in res_list:
+                if get_abstract_node_id(test_node) not in translate_cache:
+                    translate_cache[get_abstract_node_id(test_node)] = []
+                translate_cache[get_abstract_node_id(test_node)].append(get_node_translation(test_node))
+            break
+        print()
+
+def validation_loop(
+    cur_graph,
+    retranslation_dict,
+    redecomposition_dict,
+    num_llm_query,
+    decompose_fewshots=None,
+    translate_fewshots=None
+):
+
+    decompose_cache = {}
+    bad_decompose_cache = {}
+    query_oracle_decomposition_dict(redecomposition_dict,decompose_cache,bad_decompose_cache)
+    
+    translate_cache = {}
+    bad_translate_cache = {}
+    query_oracle_translation_dict(retranslation_dict,translate_cache,bad_translate_cache)
+    
+    cur_retranslation_dict = dict((k,v.copy()) for k,v in retranslation_dict.items())
+    cur_redecomposition_dict = dict((k,v.copy()) for k,v in redecomposition_dict.items())
+    
+    all_retranslation_dict = copy.deepcopy(retranslation_dict) #only counts outputs from LLM
+    all_redecomposition_dict = copy.deepcopy(redecomposition_dict)
+    
+    cur_all_retranslation_dict = copy.deepcopy(cur_retranslation_dict) #only counts outputs from LLM
+    cur_all_redecomposition_dict = copy.deepcopy(cur_redecomposition_dict)
+        
+    correct_abs_id_list = []
+    
+    iter_count = 0
+    decomposition_inspect_count = 0
+    translation_inspect_count = 0
+    translation_fix_count = 0
+    decomposition_fix_count = 0
+    check_count = 0
+    
+    
+    prev_select_ids = set()
+    prev_literal_ids = set()
+    prev_unique_ids = set()
+    while True:
+        candidate_node_set = get_next_candidate_set(cur_graph,
+                                                    cur_retranslation_dict,
+                                                    cur_redecomposition_dict,
+                                                    prev_select_ids)
+        
+        candidate_set = set([get_literal_node_id(node) for node in candidate_node_set])
+        assert len(candidate_node_set) > 0
+    
+        iter_count += 1
+        found_change = False
+        work_list = get_subgraph_grouping_from_nodelist(candidate_node_set)
+        while len(work_list) > 0:
+            subg_node_list = work_list.pop()
+            cur_node = subg_node_list.pop(0)
+            cur_str_dcmp_dict = dict((k,v.assert_text) for k,v in cur_node.dcmp_dict.items())
+            cur_node_id = get_literal_node_id(cur_node)
+            
+            for entry in cur_redecomposition_dict[get_literal_node_id(cur_node)]:            
+                if not is_dcmp_in_dict(get_literal_node_id(cur_node),entry,decompose_cache) \
+                    and not is_dcmp_in_dict(get_literal_node_id(cur_node),entry,bad_decompose_cache): #unknown decomposition
+                    query_oracle_decomposition_dict(cur_redecomposition_dict,decompose_cache,bad_decompose_cache)
+            
+            if cur_node_id in prev_literal_ids:
+                pass
+            elif is_dcmp_in_dict(get_literal_node_id(cur_node),cur_str_dcmp_dict,decompose_cache):
+                decomposition_inspect_count += 1
+                cur_redecomposition_dict[cur_node.assert_text] = [cur_str_dcmp_dict]
+                prev_literal_ids.add(cur_node_id)
+            elif any([is_dcmp_in_dict(get_literal_node_id(cur_node),entry,decompose_cache) for entry in cur_redecomposition_dict[get_literal_node_id(cur_node)]]):
+                found_change = True
+                select_dcmp_idx = np.argmax([is_dcmp_in_dict(get_literal_node_id(cur_node),entry,decompose_cache) for entry in cur_redecomposition_dict[get_literal_node_id(cur_node)]])
+                decomposition_inspect_count += len(cur_redecomposition_dict[get_literal_node_id(cur_node)])
+                cur_redecomposition_dict[get_literal_node_id(cur_node)] = [cur_redecomposition_dict[get_literal_node_id(cur_node)][select_dcmp_idx]] #optional
+                prev_literal_ids.add(cur_node_id)
+                continue
+            else: #decomposition bad
+                #print("dcmp fixed")
+                decomposition_inspect_count += len(cur_redecomposition_dict[get_literal_node_id(cur_node)])
+                decomposition_fix_count += 1
+                found_change = True
+                if get_literal_node_id(cur_node) not in decompose_cache:
+                    query_oracle_for_node_decomposition(cur_node,decompose_cache)
+                cur_redecomposition_dict[get_literal_node_id(cur_node)] = [decompose_cache[get_literal_node_id(cur_node)][0]]
+                print(decompose_cache[get_literal_node_id(cur_node)][0])
+                str_dcmp_dict = cur_redecomposition_dict[get_literal_node_id(cur_node)][0]
+                add_decomposition(get_literal_node_id(cur_node),str_dcmp_dict,cur_retranslation_dict,cur_redecomposition_dict,num_llm_query,
+                decompose_fewshots=decompose_fewshots,
+                translate_fewshots=translate_fewshots)
+                for k in cur_retranslation_dict:
+                    if k not in all_retranslation_dict:
+                        all_retranslation_dict[k] = cur_retranslation_dict[k].copy()
+                    if k not in cur_all_retranslation_dict:
+                        cur_all_retranslation_dict[k] = cur_retranslation_dict[k].copy()
+                for k in cur_redecomposition_dict:
+                    if k not in all_redecomposition_dict:
+                        all_redecomposition_dict[k] = cur_redecomposition_dict[k].copy()
+                    if k not in cur_all_redecomposition_dict:
+                        cur_all_redecomposition_dict[k] = cur_redecomposition_dict[k].copy()
+                prev_literal_ids.add(cur_node_id)
+                continue
+            
+            next_id_query = get_abstract_node_id(cur_node)
+            for entry in cur_retranslation_dict[next_id_query]:
+                if not is_translation_in_dict(next_id_query,entry,translate_cache) \
+                    and not is_translation_in_dict(next_id_query,entry,bad_translate_cache): #unknown translation
+                    query_oracle_translation_dict(cur_retranslation_dict,translate_cache,bad_translate_cache)
+            
+            if get_unique_node_id(cur_node) in prev_unique_ids:
+                pass
+            elif is_translation_in_dict(next_id_query,get_node_translation(cur_node),translate_cache):
+                translation_inspect_count += 1
+                #print("found correct!",translation_inspect_count)
+                prev_select_ids.add(cur_node_id)
+                prev_unique_ids.add(get_unique_node_id(cur_node))
+            elif any([is_translation_in_dict(next_id_query,entry,translate_cache) for entry in cur_retranslation_dict[next_id_query]]):
+                found_change = True
+                translation_inspect_count += len(cur_retranslation_dict[next_id_query])
+                cur_translation_list = remove_duplicate_translations(cur_retranslation_dict[next_id_query])
+                is_select_translation = [is_translation_in_dict(next_id_query,entry,translate_cache) for entry in cur_translation_list]
+                #print("atleast one correct!",translation_inspect_count,len(cur_retranslation_dict[next_id_query]))
+                cur_retranslation_dict[next_id_query] = [cur_translation_list[i] for i in range(len(is_select_translation)) if is_select_translation[i]]
+                prev_select_ids.add(cur_node_id)
+                prev_unique_ids.add(get_unique_node_id(cur_node))
+                continue
+            else: #bad translation
+                translation_inspect_count += len(cur_retranslation_dict[next_id_query])
+                translation_fix_count += 1
+                #print("translation fixed")
+                found_change = True
+                if next_id_query not in translate_cache:
+                    query_oracle_for_node_translation(cur_node,translate_cache)
+                correct_abs_id_list.append(next_id_query)
+                cur_retranslation_dict[next_id_query] = translate_cache[next_id_query]
+    
+                prev_select_ids.add(cur_node_id)
+                prev_unique_ids.add(get_unique_node_id(cur_node))
+                continue
+    
+            if len(subg_node_list) > 0:
+                work_list += get_subgraph_grouping_from_nodelist(subg_node_list)
+    
+        if not found_change:
+            break
+    return cur_retranslation_dict, cur_redecomposition_dict
+
+def generate_validate_and_search(
+    test_str,
+    formula_DUT=None,
+    num_llm_query=3,
+    ):
+    if formula_DUT is None:
+        formula_DUT = "0"
+    decompose_fewshots = pd.read_excel('Decomposition_SelectFewShots.xlsx').drop(columns=['decomposition type']).to_dict('records')
+    translate_fewshots = pd.read_excel('TemplateSubTranslation_SelectFewShots.xlsx').drop(columns=['property number','property type']).to_dict('records')
+    ## step 1: generation
+    cur_graph = Node(test_str,
+            translate_fewshots=translate_fewshots,
+            decompose_fewshots=decompose_fewshots
+           )
+    redecomposition_dict,retranslation_dict = construct_redecomposition_and_retranslation_dict(
+                                                assert_text=cur_graph.assert_text,
+                                                num_try=num_llm_query,
+                                                inner_max_try=2,
+                                                translate_fewshots=translate_fewshots,
+                                                decompose_fewshots=decompose_fewshots)
+
+    ## step 2: validation
+    cur_retranslation_dict,cur_redecomposition_dict = validation_loop(
+        cur_graph,
+        retranslation_dict,
+        redecomposition_dict,
+        num_llm_query,
+        decompose_fewshots=decompose_fewshots,
+        translate_fewshots=translate_fewshots
+    )
+    
+    ## step 3: translation search
+    checked_graphs = set()
+    mc_graph_list = constrain_decomposition_for_node(cur_graph,
+                                               node=cur_graph,
+                                               retranslation_dict=cur_retranslation_dict,
+                                               redecomposition_dict=cur_redecomposition_dict,
+                                               #redecomposition_dict=graph_to_decompose_cache(mc_holds_graph_list[0]),
+                                               formula_DUT=formula_DUT,
+                                               dec_cache={},
+                                               visited_set=set(),
+                                               checked_graphs=checked_graphs)
+    if len(mc_graph_list) > 0:
+        print("found a specification that holds on the DUT!")
+        ##return most constrained specification(s)
+        filtered_list = filter_graph_list(graph_list=mc_graph_list,filter_func=get_most_constrained)
+        return True, filtered_list
+    else:
+        print("did not find a specification that holds on the DUT!")
+        ##identify culprit nodes for the failure to hold on the DUT
+        dec_graph_list = get_deconstrain_decomposition_for_node(
+            cur_graph,
+            cur_graph,
+            cur_retranslation_dict,
+            cur_redecomposition_dict,
+            cur_cache={},
+            skip_set=set(),
+            visited_set=set(),
+            check_trivial=False,
+            filter_res=False,
+            #mode="all",
+            mode="prune")
+        return False, get_culprit_batch(dec_graph_list,formula_DUT)

@@ -25,7 +25,7 @@ def get_checked_prediction(cur_prompt,check_args,check_func,model,max_try=1):
 
 def get_inference_response(prompt,model):
     #model options: gpt-3.5-turbo-0125, gpt-4-0125-preview
-    print(prompt)
+    #print(prompt)
     retry = True
     while retry:
         try:
