@@ -2,7 +2,6 @@ from utils import *
 import openai
 from tqdm import tqdm
 import itertools
-from matplotlib import pyplot as plt
 import context_retriever
 import re
 import pandas as pd
